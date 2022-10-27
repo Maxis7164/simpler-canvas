@@ -1,0 +1,12 @@
+# packages
+node_modules
+
+# compiled
+*.js
+*.d.ts
+
+# test
+
+/index.html
+/colors.txt
+/app.ts
