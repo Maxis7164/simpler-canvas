@@ -1,8 +1,26 @@
-type Typed<T = any> = { [key: string]: T };
-type Boundings = [Point, Point, Point, Point];
-type Box = [number, number, number, number];
-type Coords = [number, number];
+# Types
 
+## `Typed` - 0.1.0-alpha
+
+```ts
+type Typed<T = any> = { [key: string]: T };
+```
+
+## `Coords`
+
+```ts
+type Coords = [number, number];
+```
+
+## `Box`
+
+```ts
+type Box = [Point, Point, Point, Point];
+```
+
+## `SVGInstructionType`
+
+```ts
 type SVGInstructionType =
   | "M"
   | "m"
@@ -16,4 +34,10 @@ type SVGInstructionType =
   | "c"
   | "S"
   | "s";
+```
+
+## `SVGInstruction`
+
+```ts
 type SVGInstruction = [SVGInstructionType, ...number];
+```
