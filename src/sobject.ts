@@ -1,22 +1,31 @@
 import { Point } from "./point.js";
 import { coordsToPoints } from "./utils.js";
 
-export interface SObjectOpts {
-  stroke: string;
-  weight: number;
-  fill: string;
-}
-
 export class SObject {
   static selectionColor: string = "#54bdff";
 
   static applyOpts(obj: SObject, opts: Partial<SObjectOpts>) {
+    if (opts.selectable) obj.selectable = opts.selectable;
     if (opts.stroke) obj.stroke = opts.stroke;
     if (opts.weight) obj.weight = opts.weight;
     if (opts.fill) obj.fill = opts.fill;
   }
-
-  #selectable: boolean = true;
+  static getOpts(obj: SObject): SObjectOpts {
+    return {
+      selectable: obj.selectable,
+      stroke: obj.stroke,
+      weight: obj.weight,
+      fill: obj.fill,
+    };
+  }
+  static toObject(obj: SObject): SObjectExport {
+    return {
+      ...SObject.getOpts(obj),
+      type: "sobject",
+      x: obj.#x,
+      y: obj.#y,
+    };
+  }
 
   #x: number = -1;
   #y: number = -1;
@@ -27,8 +36,9 @@ export class SObject {
     if (opts) SObject.applyOpts(this, opts);
   }
 
+  selectable: boolean = true;
+  stroke: string = "#000000";
   weight: number = 1;
-  stroke: string = "";
   fill: string = "";
 
   setBox(b: Box) {
@@ -37,6 +47,11 @@ export class SObject {
   move(dx: number, dy: number): void {
     this.#x += dx;
     this.#y += dy;
+  }
+  setPosition(p: Coords | Point): void {
+    if (p instanceof Point) p = p.coords;
+
+    [this.#x, this.#y] = p;
   }
 
   contains(p: Point | Coords): boolean {
@@ -48,9 +63,10 @@ export class SObject {
 
   render(ctx: CanvasRenderingContext2D): void {}
 
-  get isSelectable(): boolean {
-    return this.#selectable;
+  toObject(): SObjectExport {
+    return SObject.toObject(this);
   }
+
   get coords(): Point {
     return new Point([this.#x, this.#y]);
   }

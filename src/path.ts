@@ -1,12 +1,34 @@
-import { SObject, SObjectOpts } from "./sobject.js";
-import { calcPointOnQuadraticCurve, parseSVGPath } from "./utils.js";
+import { SObject } from "./sobject.js";
+import {
+  calcPointOnQuadraticCurve,
+  drawSvgPath,
+  parseSVGPath,
+} from "./utils.js";
 
 // interface PathOpts extends SObjectOpts {}
+
+export interface PathExport extends SObjectExport {
+  path: string;
+  type: "path";
+}
 
 export class Path extends SObject {
   // static applyOpts(obj: Path, opts: Partial<PathOpts>): void {
   //   if (opts.weight) obj.weight = opts.weight;
   // }
+
+  static hydrate(obj: PathExport): Path {
+    const p = new Path(obj.path, {
+      fill: obj.fill,
+      selectable: obj.selectable,
+      stroke: obj.stroke,
+      weight: obj.weight,
+    });
+
+    p.setPosition([obj.x, obj.y]);
+
+    return p;
+  }
 
   #p: SVGInstruction[];
 
@@ -54,72 +76,29 @@ export class Path extends SObject {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    let last: Coords = [0, 0];
-
     ctx.save();
     ctx.beginPath();
 
-    ctx.lineWidth = this.weight;
     ctx.strokeStyle = this.stroke;
-    ctx.fillStyle = this.stroke;
+    ctx.lineWidth = this.weight;
+    ctx.fillStyle = this.fill;
 
-    this.#p.forEach((p) => {
-      switch (p[0]) {
-        case "M":
-          ctx.moveTo(p[1], p[2]);
-          last = [p[1], p[2]];
-          break;
-        case "m":
-          ctx.moveTo(last[0] + p[1], last[1] + p[2]);
-          last = [last[0] + p[1], last[1] + p[2]];
-          break;
-        case "L":
-          ctx.lineTo(p[1], p[2]);
-          last = [p[1], p[2]];
-          break;
-        case "l":
-          ctx.lineTo(last[0] + p[1], last[1] + p[2]);
-          last = [last[0] + p[1], last[1] + p[2]];
-          break;
-        case "Q":
-          ctx.quadraticCurveTo(p[1], p[2], p[3], p[4]);
-          last = [p[3], p[4]];
-          break;
-        case "q":
-          ctx.quadraticCurveTo(
-            last[0] + p[1],
-            last[1] + p[2],
-            last[0] + p[3],
-            last[1] + p[4]
-          );
-          last = [last[0] + p[3], last[1] + p[4]];
-          break;
-        case "C":
-          ctx.bezierCurveTo(p[1], p[2], p[3], p[4], p[5], p[6]);
-          last = [p[5], p[6]];
-          break;
-        case "c":
-          ctx.bezierCurveTo(
-            last[0] + p[1],
-            last[1] + p[2],
-            last[0] + p[3],
-            last[1] + p[4],
-            last[1] + p[5],
-            last[1] + p[6]
-          );
-          last = [last[0] + p[5], last[1] + p[6]];
-          break;
-      }
-    });
-
-    ctx.closePath();
+    drawSvgPath(ctx, this.#p);
 
     if (this.stroke) ctx.stroke();
     if (this.fill) ctx.fill();
 
-    ctx.strokeStyle = "#bf4566";
-    ctx.strokeRect(...this.box);
+    // ctx.strokeStyle = "#bf4566";
+    // ctx.strokeRect(...this.box);
 
     ctx.restore();
+  }
+
+  toObject(): PathExport {
+    return {
+      ...SObject.toObject(this),
+      path: this.#p.map((p) => p.join(" ")).join(" "),
+      type: "path",
+    };
   }
 }

@@ -41,3 +41,32 @@ type SVGInstructionType =
 ```ts
 type SVGInstruction = [SVGInstructionType, ...number];
 ```
+
+## `Unsubscribe`
+
+The unsubscribe type indicates a function, which is used to unsubscribe from an event listener.
+
+```ts
+type Unsubscribe = () => void;
+```
+
+## `CanvasExport`
+
+```ts
+interface CanvasExport {
+  background: string;
+  objects: Typed[];
+  overlay: string;
+  version: string;
+  height: number;
+  width: number;
+}
+```
+
+## `SObjectExport`
+
+```ts
+interface {
+  
+}
+```

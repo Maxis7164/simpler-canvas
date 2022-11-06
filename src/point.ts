@@ -25,8 +25,25 @@ export class Point {
     [p] = coordsToPoints(p);
     return new Point([
       this.#x + (p.#x - this.#x) * t,
-      this.#x + (p.#y - this.#y) * t,
+      this.#y + (p.#y - this.#y) * t,
     ]);
+  }
+
+  contains(p: Point | Coords, range: number): boolean {
+    if (range < 1) {
+      console.error(
+        "[!] <Simpler Canvas> Invalid Range: A range of a point cannot be less then 1!"
+      );
+      return false;
+    }
+    [p] = coordsToPoints(p);
+
+    return (
+      this.#x - range / 2 < p.#x &&
+      this.#x + range / 2 > p.#x &&
+      this.#y - range / 2 < p.#y &&
+      this.#y + range / 2 > p.#y
+    );
   }
 
   toString(): string {
