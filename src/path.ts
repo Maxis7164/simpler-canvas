@@ -63,7 +63,15 @@ export class Path extends SObject {
       }
     });
 
-    this.setBox([low[0], low[1], high[0] - low[0], high[1] - low[1]]);
+    const box: Box = [low[0], low[1], high[0] - low[0], high[1] - low[1]];
+
+    this.#p = this.#p.map((inst) =>
+      inst.map((part, i) =>
+        typeof part === "string" ? part : i % 2 ? part - box[1] : part - box[0]
+      )
+    ) as SVGInstruction[];
+
+    this.setBox(box);
   }
 
   constructor(path: SVGInstruction[] | string, opts?: Partial<SObjectOpts>) {
@@ -83,7 +91,7 @@ export class Path extends SObject {
     ctx.lineWidth = this.weight;
     ctx.fillStyle = this.fill;
 
-    drawSvgPath(ctx, this.#p);
+    drawSvgPath(ctx, this.#p, this.coords);
 
     if (this.stroke) ctx.stroke();
     if (this.fill) ctx.fill();

@@ -86,57 +86,66 @@ export function smoothenPath(p: Point[], corr: number = 0): SVGInstruction[] {
 
 export function drawSvgPath(
   ctx: CanvasRenderingContext2D,
-  svg: SVGInstruction[]
+  svg: SVGInstruction[],
+  c: Coords | Point
 ): void {
+  const a = c instanceof Point ? c : new Point(c);
+
   let last: Coords = [0, 0];
 
   ctx.beginPath();
 
   svg.forEach((p) => {
+    const np: number[] = p
+      .filter((a) => typeof a === "number")
+      .map((coord, i) =>
+        i % 2 === 0 ? (coord as number) + a.x : (coord as number) + a.y
+      );
+
     switch (p[0]) {
       case "M":
-        ctx.moveTo(p[1], p[2]);
-        last = [p[1], p[2]];
+        ctx.moveTo(np[0], np[1]);
+        last = [np[0], np[1]];
         break;
       case "m":
-        ctx.moveTo(last[0] + p[1], last[1] + p[2]);
-        last = [last[0] + p[1], last[1] + p[2]];
+        ctx.moveTo(last[0] + np[0], last[1] + np[1]);
+        last = [last[0] + np[0], last[1] + np[1]];
         break;
       case "L":
-        ctx.lineTo(p[1], p[2]);
-        last = [p[1], p[2]];
+        ctx.lineTo(np[0], np[1]);
+        last = [np[0], np[1]];
         break;
       case "l":
-        ctx.lineTo(last[0] + p[1], last[1] + p[2]);
-        last = [last[0] + p[1], last[1] + p[2]];
+        ctx.lineTo(last[0] + np[0], last[1] + np[1]);
+        last = [last[0] + np[0], last[1] + np[1]];
         break;
       case "Q":
-        ctx.quadraticCurveTo(p[1], p[2], p[3], p[4]);
-        last = [p[3], p[4]];
+        ctx.quadraticCurveTo(np[0], np[1], np[2], np[3]);
+        last = [np[2], np[3]];
         break;
       case "q":
         ctx.quadraticCurveTo(
-          last[0] + p[1],
-          last[1] + p[2],
-          last[0] + p[3],
-          last[1] + p[4]
+          last[0] + np[0],
+          last[1] + np[1],
+          last[0] + np[2],
+          last[1] + np[3]
         );
-        last = [last[0] + p[3], last[1] + p[4]];
+        last = [last[0] + np[2], last[1] + np[3]];
         break;
       case "C":
-        ctx.bezierCurveTo(p[1], p[2], p[3], p[4], p[5], p[6]);
-        last = [p[5], p[6]];
+        ctx.bezierCurveTo(np[0], np[1], np[2], np[3], np[4], np[5]);
+        last = [np[5], np[6]];
         break;
       case "c":
         ctx.bezierCurveTo(
-          last[0] + p[1],
-          last[1] + p[2],
-          last[0] + p[3],
-          last[1] + p[4],
-          last[1] + p[5],
-          last[1] + p[6]
+          last[0] + np[0],
+          last[1] + np[1],
+          last[0] + np[2],
+          last[1] + np[3],
+          last[1] + np[4],
+          last[1] + np[5]
         );
-        last = [last[0] + p[5], last[1] + p[6]];
+        last = [last[0] + np[4], last[1] + np[5]];
         break;
     }
   });

@@ -27,6 +27,8 @@ export class SObject {
     };
   }
 
+  #selected: boolean = false;
+
   #x: number = -1;
   #y: number = -1;
   #w: number = -1;
@@ -54,19 +56,51 @@ export class SObject {
     [this.#x, this.#y] = p;
   }
 
+  setSelected(isSelected?: boolean): void {
+    if (this.selectable) this.#selected = isSelected ?? !this.#selected;
+  }
+
   contains(p: Point | Coords): boolean {
     [p] = coordsToPoints(p);
     return (
       p.gt([this.#x, this.#y]) && p.lt([this.#x + this.#w, this.#y + this.#h])
     );
   }
+  containedIn(box: Box): boolean {
+    console.log(
+      this.#x > box[0],
+      this.#x + this.#w < box[0] + box[2],
+      this.#y > box[1],
+      this.#y + this.#h < box[1] + box[3]
+    );
+
+    return (
+      this.#x > box[0] &&
+      this.#x + this.#w < box[0] + box[2] &&
+      this.#y > box[1] &&
+      this.#y + this.#h < box[1] + box[3]
+    );
+  }
 
   render(ctx: CanvasRenderingContext2D): void {}
+
+  renderBox(ctx: CanvasRenderingContext2D): void {
+    ctx.save();
+    ctx.beginPath();
+
+    ctx.strokeStyle = "#22ffbb";
+    ctx.strokeRect(...this.box);
+
+    ctx.restore();
+  }
 
   toObject(): SObjectExport {
     return SObject.toObject(this);
   }
 
+  get selected(): boolean {
+    return this.#selected;
+  }
   get coords(): Point {
     return new Point([this.#x, this.#y]);
   }

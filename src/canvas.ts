@@ -3,6 +3,7 @@ import { Path, PathExport } from "./path.js";
 import { SObject } from "./sobject.js";
 import { Brush } from "./brush.js";
 import { Point } from "./point.js";
+import { Selection } from "./selection.js";
 
 interface SCanvasEventMap extends Typed {}
 
@@ -54,6 +55,9 @@ export class Canvas {
 
   #objs: SObject[] = [];
 
+  #sel?: Selection | null = null;
+  #isDown: boolean = false;
+
   #applyOwnSize(): void {
     this.#lcv.height = this.#ucv.height = this.#h;
     this.#lcv.width = this.#ucv.width = this.#w;
@@ -82,6 +86,54 @@ export class Canvas {
     }
   }
 
+  #unselect(): void {
+    this.#objs.forEach((obj) => obj.setSelected(false));
+  }
+  #getTargets(pos: Coords | Point): SObject[] {
+    return this.#objs.filter((obj) => obj.contains(pos));
+  }
+
+  #onUpDown(e: PointerEvent): void {
+    this.#isDown = e.type === "pointerdown";
+    const p = this.getCoords([e.x, e.y]);
+    const t = this.#getTargets(p);
+    console.log(t);
+
+    if (this.#isDown) {
+      this.#unselect();
+
+      if (t.length > 0) {
+        t.forEach((obj) => obj.setSelected(true));
+      } else this.#sel = new Selection(p);
+    } else {
+      if (this.#sel) {
+        const box = this.#sel?.getBox()!;
+
+        if (box)
+          this.#objs.forEach((obj) => obj.setSelected(obj.containedIn(box)));
+
+        this.#sel = null;
+      }
+    }
+
+    this.renderUpper();
+  }
+  #onMove(e: PointerEvent): void {
+    if (this.#isDown) {
+      const p = this.getCoords([e.x, e.y]);
+      const s = this.getSelectedObjects();
+
+      if (this.#sel) {
+        this.#sel.setEnd(p);
+        this.renderUpper();
+      } else if (s.length > 0) {
+        s.forEach((obj) => obj.move(e.movementX, e.movementY));
+        this.renderUpper();
+        this.renderLower();
+      }
+    }
+  }
+
   constructor(parent: HTMLElement, opts?: Partial<CanvasOpts>) {
     [this.#wr, this.#lcv, this.#ucv] = Canvas.#setup(parent);
 
@@ -90,6 +142,15 @@ export class Canvas {
 
     if (opts) this.applyOptions(opts);
     this.#applyOwnSize();
+
+    this.#ucv.addEventListener("pointerdown", (e) => this.#onUpDown(e));
+    this.#ucv.addEventListener("pointerup", (e) => this.#onUpDown(e));
+    document.addEventListener("pointerup", (e) => this.#onUpDown(e));
+    this.#ucv.addEventListener("pointermove", (e) => this.#onMove(e));
+  }
+
+  getSelectedObjects(): SObject[] {
+    return this.#objs.filter((obj) => obj.selected);
   }
 
   add(...objs: SObject[]): void {
@@ -125,29 +186,29 @@ export class Canvas {
   setBrush(b?: Brush | null): void {
     this.#brush = b ?? null;
 
-    if (b) {
-      this.#ucv.addEventListener("pointerdown", (e) =>
-        this.#brush!.onUpDown(e, this.#uctx)
-      );
-      this.#ucv.addEventListener("pointerup", (e) =>
-        this.#brush!.onUpDown(e, this.#uctx)
-      );
-      this.#ucv.addEventListener("pointerleave", (e) =>
-        this.#brush!.onUpDown(e, this.#uctx)
-      );
-      this.#ucv.addEventListener("pointermove", (e) =>
-        this.#brush!.onMove(e, this.#uctx)
-      );
+    // if (b) {
+    //   this.#ucv.addEventListener("pointerdown", (e) =>
+    //     this.#brush!.onUpDown(e, this.#uctx)
+    //   );
+    //   this.#ucv.addEventListener("pointerup", (e) =>
+    //     this.#brush!.onUpDown(e, this.#uctx)
+    //   );
+    //   this.#ucv.addEventListener("pointerleave", (e) =>
+    //     this.#brush!.onUpDown(e, this.#uctx)
+    //   );
+    //   this.#ucv.addEventListener("pointermove", (e) =>
+    //     this.#brush!.onMove(e, this.#uctx)
+    //   );
 
-      this.#unsub = this.#brush!.on("created", ({ path }) => this.add(path));
-    } else {
-      this.#ucv.outerHTML = this.#ucv.outerHTML;
+    //   this.#unsub = this.#brush!.on("created", ({ path }) => this.add(path));
+    // } else {
+    //   this.#ucv.outerHTML = this.#ucv.outerHTML;
 
-      if (this.#unsub) this.#unsub();
-      this.#unsub = null;
+    //   if (this.#unsub) this.#unsub();
+    //   this.#unsub = null;
 
-      this.renderUpper();
-    }
+    //   this.renderUpper();
+    // }
   }
 
   on<K extends keyof SCanvasEventMap>(
@@ -164,6 +225,11 @@ export class Canvas {
   }
   renderUpper(): void {
     this.#uctx.clearRect(0, 0, this.#w, this.#h);
+
+    if (this.#sel) this.#sel.render(this.#uctx);
+    this.#objs.forEach((obj) =>
+      obj.selected ? obj.renderBox(this.#uctx) : null
+    );
   }
   render(): void {
     this.#applyOwnSize();
@@ -199,6 +265,7 @@ export class Canvas {
 
     console.log(ex);
 
+    this.#objs = [];
     const nxt = ex.objects.map((obj) => {
       console.log(obj);
 
