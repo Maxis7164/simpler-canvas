@@ -67,13 +67,6 @@ export class SObject {
     );
   }
   containedIn(box: Box): boolean {
-    console.log(
-      this.#x > box[0],
-      this.#x + this.#w < box[0] + box[2],
-      this.#y > box[1],
-      this.#y + this.#h < box[1] + box[3]
-    );
-
     return (
       this.#x > box[0] &&
       this.#x + this.#w < box[0] + box[2] &&

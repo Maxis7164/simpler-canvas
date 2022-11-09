@@ -97,7 +97,6 @@ export class Canvas {
     this.#isDown = e.type === "pointerdown";
     const p = this.getCoords([e.x, e.y]);
     const t = this.#getTargets(p);
-    console.log(t);
 
     if (this.#isDown) {
       this.#unselect();
