@@ -65,9 +65,9 @@ export class Path extends SObject {
 
     const box: Box = [low[0], low[1], high[0] - low[0], high[1] - low[1]];
 
-    this.#p = this.#p.map((inst) =>
+    this.#p = this.#p.map((inst, x) =>
       inst.map((part, i) =>
-        typeof part === "string" ? part : i % 2 ? part - box[1] : part - box[0]
+        typeof part === "string" ? part : i % 2 ? part - box[0] : part - box[1]
       )
     ) as SVGInstruction[];
 
@@ -108,5 +108,9 @@ export class Path extends SObject {
       path: this.#p.map((p) => p.join(" ")).join(" "),
       type: "path",
     };
+  }
+
+  get path(): SVGInstruction[] {
+    return this.#p;
   }
 }

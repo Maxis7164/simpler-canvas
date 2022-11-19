@@ -8,6 +8,7 @@ import { Selection } from "./selection.js";
 interface SCanvasEventMap extends Typed {}
 
 interface CanvasOpts {
+  drawModeActive: boolean;
   background: string;
   overlay: string;
   height: number;
@@ -56,6 +57,7 @@ export class Canvas {
   #objs: SObject[] = [];
 
   #sel?: Selection | null = null;
+  #drawMode: boolean = false;
   #isDown: boolean = false;
 
   #applyOwnSize(): void {
@@ -98,7 +100,8 @@ export class Canvas {
     const p = this.getCoords([e.x, e.y]);
     const t = this.#getTargets(p);
 
-    if (this.#isDown) {
+    if (this.#drawMode && this.#brush) this.#brush.onUpDown(e, this.#uctx);
+    else if (this.#isDown) {
       this.#unselect();
 
       if (t.length > 0) {
@@ -120,15 +123,20 @@ export class Canvas {
   #onMove(e: PointerEvent): void {
     if (this.#isDown) {
       const p = this.getCoords([e.x, e.y]);
-      const s = this.getSelectedObjects();
 
-      if (this.#sel) {
-        this.#sel.setEnd(p);
-        this.renderUpper();
-      } else if (s.length > 0) {
-        s.forEach((obj) => obj.move(e.movementX, e.movementY));
-        this.renderUpper();
-        this.renderLower();
+      if (this.#drawMode && this.#brush) {
+        this.#brush.onMove(e, this.#uctx);
+      } else {
+        const s = this.getSelectedObjects();
+
+        if (this.#sel) {
+          this.#sel.setEnd(p);
+          this.renderUpper();
+        } else if (s.length > 0) {
+          s.forEach((obj) => obj.move(e.movementX, e.movementY));
+          this.renderUpper();
+          this.renderLower();
+        }
       }
     }
   }
@@ -171,6 +179,8 @@ export class Canvas {
 
     if (opts.height || opts.width)
       this.setSize(opts.width ?? -1, opts.height ?? -1);
+
+    if (opts.drawModeActive) this.setDrawMode(opts.drawModeActive);
   }
   setBackground(clrOrUrl: string, isOverlay: boolean = false): void {
     if (isOverlay) this.#ov = clrOrUrl;
@@ -181,33 +191,17 @@ export class Canvas {
     if (w > 0) this.#w = w * devicePixelRatio;
     if (h > 0) this.#h = h * devicePixelRatio;
   }
+  setDrawMode(active?: boolean): void {
+    this.#drawMode = active ?? !this.#drawMode;
+  }
 
   setBrush(b?: Brush | null): void {
     this.#brush = b ?? null;
 
-    // if (b) {
-    //   this.#ucv.addEventListener("pointerdown", (e) =>
-    //     this.#brush!.onUpDown(e, this.#uctx)
-    //   );
-    //   this.#ucv.addEventListener("pointerup", (e) =>
-    //     this.#brush!.onUpDown(e, this.#uctx)
-    //   );
-    //   this.#ucv.addEventListener("pointerleave", (e) =>
-    //     this.#brush!.onUpDown(e, this.#uctx)
-    //   );
-    //   this.#ucv.addEventListener("pointermove", (e) =>
-    //     this.#brush!.onMove(e, this.#uctx)
-    //   );
+    if (this.#unsub) this.#unsub();
 
-    //   this.#unsub = this.#brush!.on("created", ({ path }) => this.add(path));
-    // } else {
-    //   this.#ucv.outerHTML = this.#ucv.outerHTML;
-
-    //   if (this.#unsub) this.#unsub();
-    //   this.#unsub = null;
-
-    //   this.renderUpper();
-    // }
+    if (this.#brush)
+      this.#unsub = this.#brush.on("created", ({ path }) => this.add(path));
   }
 
   on<K extends keyof SCanvasEventMap>(

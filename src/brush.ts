@@ -84,8 +84,10 @@ export class Brush {
       )
         this.#points.push(p);
 
+      const x = smoothenPath([...this.#points]);
+
       ctx.beginPath();
-      drawSvgPath(ctx, smoothenPath([...this.#points]), [0, 0]);
+      drawSvgPath(ctx, x, [0, 0]);
       ctx.stroke();
     }
   }
