@@ -65,7 +65,7 @@ export class Path extends SObject {
 
     const box: Box = [low[0], low[1], high[0] - low[0], high[1] - low[1]];
 
-    this.#p = this.#p.map((inst, x) =>
+    this.#p = this.#p.map((inst) =>
       inst.map((part, i) =>
         typeof part === "string" ? part : i % 2 ? part - box[0] : part - box[1]
       )

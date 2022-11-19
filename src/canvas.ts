@@ -164,6 +164,10 @@ export class Canvas {
     this.#objs = [...this.#objs, ...objs];
     this.renderLower();
   }
+  remove(...objs: SObject[]): void {
+    this.#objs = this.#objs.filter((obj) => !objs.includes(obj));
+    this.renderLower();
+  }
 
   getCoords(p: Coords | Point): Point {
     if (p instanceof Point) p = [p.x, p.y];

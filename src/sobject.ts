@@ -1,5 +1,6 @@
-import { Point } from "./point.js";
 import { coordsToPoints } from "./utils.js";
+import type { Canvas } from "./canvas.js";
+import { Point } from "./point.js";
 
 export class SObject {
   static selectionColor: string = "#54bdff";
@@ -85,6 +86,10 @@ export class SObject {
     ctx.strokeRect(...this.box);
 
     ctx.restore();
+  }
+
+  remove(from: Canvas): void {
+    from.remove(this);
   }
 
   toObject(): SObjectExport {
