@@ -3,8 +3,10 @@ node_modules
 
 # compiled
 *.js
+!rollup.config.js
 *.d.ts
 !/global.d.ts
+dist
 
 # test
 

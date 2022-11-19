@@ -102,11 +102,13 @@ export class Canvas {
 
     if (this.#drawMode && this.#brush) this.#brush.onUpDown(e, this.#uctx);
     else if (this.#isDown) {
-      this.#unselect();
+      if (this.getSelectedObjects().length === 0 || !e.ctrlKey) {
+        this.#unselect();
 
-      if (t.length > 0) {
-        t.forEach((obj) => obj.setSelected(true));
-      } else this.#sel = new Selection(p);
+        if (t.length > 0) {
+          t.forEach((obj) => obj.setSelected(true));
+        } else this.#sel = new Selection(p);
+      }
     } else {
       if (this.#sel) {
         const box = this.#sel?.getBox()!;

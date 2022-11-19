@@ -1,6 +1,15 @@
-import { coordsToPoints } from "./utils.js";
-
 export class Point {
+  static #coordsToPoints(...coords: (Point | Coords)[]): Point[] {
+    return coords.map((p) => {
+      if (typeof p === "undefined")
+        throw new Error(
+          '[!] <Simpler Canvas> Invalid Coordinates: "undefined" is not a valid coordinate array or Point!'
+        );
+
+      return p instanceof Point ? p : new Point(p);
+    });
+  }
+
   #x: number;
   #y: number;
 
@@ -9,20 +18,20 @@ export class Point {
   }
 
   eq(p: Point | Coords): boolean {
-    [p] = coordsToPoints(p);
+    [p] = Point.#coordsToPoints(p);
     return this.#x === p.x && this.#y === p.y;
   }
   gt(p: Point | Coords): boolean {
-    [p] = coordsToPoints(p);
+    [p] = Point.#coordsToPoints(p);
     return this.#x > p.x && this.#y > p.y;
   }
   lt(p: Point | Coords): boolean {
-    [p] = coordsToPoints(p);
+    [p] = Point.#coordsToPoints(p);
     return this.#x < p.x && this.#y < p.y;
   }
 
   lerp(p: Point | Coords, t: number = 0.5): Point {
-    [p] = coordsToPoints(p);
+    [p] = Point.#coordsToPoints(p);
     return new Point([
       this.#x + (p.#x - this.#x) * t,
       this.#y + (p.#y - this.#y) * t,
@@ -36,7 +45,7 @@ export class Point {
       );
       return false;
     }
-    [p] = coordsToPoints(p);
+    [p] = Point.#coordsToPoints(p);
 
     return (
       this.#x - range / 2 < p.#x &&
