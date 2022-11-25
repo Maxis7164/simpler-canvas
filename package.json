@@ -5,6 +5,9 @@
   "repository": {
     "url": "https://www.github.com/Maxis7164/simpler-canvas"
   },
+  "scripts": {
+    "bundle": "rollup --config"
+  },
   "devDependencies": {
     "@rollup/plugin-typescript": "^9.0.2",
     "fabric": "^5.2.4",
