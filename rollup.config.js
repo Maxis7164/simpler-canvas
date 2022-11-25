@@ -4,7 +4,7 @@ module.exports = {
   input: "./index.ts",
   output: {
     file: "bundle.js",
-    format: "cjs",
+    format: "es",
   },
   plugins: [ts({ tsconfig: "./tsconfig.rollup.json" })],
 };

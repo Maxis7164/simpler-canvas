@@ -1,9 +1,9 @@
 import { Callback, SimplerEventMap, Unsubscribe } from "./events.js";
 import { Path, PathExport } from "./path.js";
+import { Selection } from "./selection.js";
 import { SObject } from "./sobject.js";
 import { Brush } from "./brush.js";
 import { Point } from "./point.js";
-import { Selection } from "./selection.js";
 
 interface SCanvasEventMap extends Typed {}
 
