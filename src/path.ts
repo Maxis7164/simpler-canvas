@@ -87,6 +87,8 @@ export class Path extends SObject {
     ctx.save();
     ctx.beginPath();
 
+    ctx.transform(...this.matrix);
+
     ctx.strokeStyle = this.stroke;
     ctx.lineWidth = this.weight;
     ctx.fillStyle = this.fill;

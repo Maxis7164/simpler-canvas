@@ -1,4 +1,3 @@
-import { Path } from "./path.js";
 import { Point } from "./point.js";
 
 export function coordsToPoints(...coords: (Coords | Point)[]): Point[] {
