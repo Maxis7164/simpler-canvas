@@ -1,10 +1,12 @@
-const ts = require("@rollup/plugin-typescript");
+import ts from "@rollup/plugin-typescript";
 
-module.exports = {
-  input: "./index.ts",
-  output: {
-    file: "bundle.js",
-    format: "es",
+export default [
+  {
+    input: "./index.ts",
+    output: {
+      dir: "dist",
+      format: "es",
+    },
+    plugins: [ts({ tsconfig: "./tsconfig.rollup.json" })],
   },
-  plugins: [ts({ tsconfig: "./tsconfig.rollup.json" })],
-};
+];
