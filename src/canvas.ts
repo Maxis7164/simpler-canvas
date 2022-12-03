@@ -143,7 +143,16 @@ export class Canvas {
     }
   }
 
-  constructor(parent: HTMLElement, opts?: Partial<CanvasOpts>) {
+  constructor(parent: HTMLElement | string, opts?: Partial<CanvasOpts>) {
+    if (!(parent instanceof HTMLElement)) {
+      const x = document.querySelector<HTMLElement>(parent);
+      if (x === null)
+        throw new Error(
+          '[!] <Simpler Canvas> Cannot create Canvas: The Element with selector "${parent}" does not exist!'
+        );
+      else parent = x!;
+    }
+
     [this.#wr, this.#lcv, this.#ucv] = Canvas.#setup(parent);
 
     this.#lctx = this.#lcv.getContext("2d")!;
