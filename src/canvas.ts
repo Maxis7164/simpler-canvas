@@ -148,7 +148,7 @@ export class Canvas {
       const x = document.querySelector<HTMLElement>(parent);
       if (x === null)
         throw new Error(
-          '[!] <Simpler Canvas> Cannot create Canvas: The Element with selector "${parent}" does not exist!'
+          `[!] <Simpler Canvas> Cannot create Canvas: The Element with selector "${parent}" does not exist!`
         );
       else parent = x!;
     }
