@@ -281,4 +281,23 @@ export class Canvas {
     });
     this.add(...nxt);
   }
+
+  get drawModeActive(): boolean {
+    return this.#drawMode;
+  }
+  get backgroundColor(): string {
+    return this.#bg;
+  }
+  get overlayColor(): string {
+    return this.#ov;
+  }
+  get height(): number {
+    return this.#h;
+  }
+  get width(): number {
+    return this.#w;
+  }
+  get dimensions(): [number, number] {
+    return [this.#h, this.#w];
+  }
 }
