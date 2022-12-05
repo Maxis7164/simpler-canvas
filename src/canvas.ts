@@ -2,6 +2,7 @@ import { Callback, SimplerEventMap, Unsubscribe } from "./events.js";
 import { Path, PathExport } from "./path.js";
 import { Selection } from "./selection.js";
 import { SObject } from "./sobject.js";
+import { Layered } from "./layer.js";
 import { Brush } from "./brush.js";
 import { Point } from "./point.js";
 
@@ -54,7 +55,7 @@ export class Canvas {
   #w: number = 600;
   #bx!: DOMRect;
 
-  #objs: SObject[] = [];
+  #objs: Layered<SObject> = new Layered<SObject>();
 
   #sel?: Selection | null = null;
   #drawMode: boolean = false;
@@ -98,16 +99,15 @@ export class Canvas {
   #onUpDown(e: PointerEvent): void {
     this.#isDown = e.type === "pointerdown";
     const p = this.getCoords([e.x, e.y]);
-    const t = this.#getTargets(p);
+    const t = new Layered(...this.#getTargets(p));
 
     if (this.#drawMode && this.#brush) this.#brush.onUpDown(e, this.#uctx);
     else if (this.#isDown) {
       if (this.getSelectedObjects().length === 0 || !e.ctrlKey) {
         this.#unselect();
 
-        if (t.length > 0) {
-          t.forEach((obj) => obj.setSelected(true));
-        } else this.#sel = new Selection(p);
+        if (t.length > 0) t[t.lastIndex].setSelected(true);
+        else this.#sel = new Selection(p);
       }
     } else {
       if (this.#sel) {
@@ -170,13 +170,29 @@ export class Canvas {
   getSelectedObjects(): SObject[] {
     return this.#objs.filter((obj) => obj.selected);
   }
+  backward(obj: SObject): void {
+    this.#objs.toRelativePosition(obj, -1);
+    this.renderLower();
+  }
+  toBack(obj: SObject): void {
+    this.#objs.toStart(obj);
+    this.renderLower();
+  }
+  forward(obj: SObject): void {
+    this.#objs.toRelativePosition(obj, 1);
+    this.renderLower();
+  }
+  toFront(obj: SObject): void {
+    this.#objs.toEnd(obj);
+    this.renderLower();
+  }
 
   add(...objs: SObject[]): void {
-    this.#objs = [...this.#objs, ...objs];
+    this.#objs.set([...this.#objs, ...objs]);
     this.renderLower();
   }
   remove(...objs: SObject[]): void {
-    this.#objs = this.#objs.filter((obj) => !objs.includes(obj));
+    this.#objs.set(this.#objs.filter((obj) => !objs.includes(obj)));
     this.renderLower();
   }
 
@@ -273,7 +289,7 @@ export class Canvas {
 
     console.log(ex);
 
-    this.#objs = [];
+    this.#objs.set([]);
     const nxt = ex.objects.map((obj) => {
       console.log(obj);
 
