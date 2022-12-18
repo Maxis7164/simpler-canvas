@@ -1,5 +1,4 @@
 import { SimplerEvent, SimplerEventMap } from "./events.js";
-import { drawSvgPath, smoothenPath } from "./utils.js";
 import { Callback, Unsubscribe } from "./events";
 import { Canvas } from "./canvas.js";
 import { Point } from "./point.js";
@@ -18,6 +17,46 @@ interface BrushEventMap extends Typed {
 }
 
 export class Brush {
+  static smoothenPath(p: Point[], corr: number = 0): SVGInstruction[] {
+    if (p.length < 2) return [];
+
+    const path: SVGInstruction[] = [];
+    const many: boolean = p.length > 2;
+
+    let i: number;
+    let p1 = p[0].clone();
+    let p2 = p[1].clone();
+    let multX: number = 1;
+    let multY: number = 0;
+
+    if (many) {
+      multX = p[2].x < p2.x ? -1 : p[2].x === p2.x ? 0 : 1;
+      multY = p[2].y < p2.y ? -1 : p[2].y === p2.y ? 0 : 1;
+    }
+
+    path.push(["M", p1.x - multX * corr, p1.y - multY * corr]);
+
+    for (i = 1; i < p.length; i++) {
+      if (!p1.eq(p2)) {
+        const mid = p1.lerp(p2, 0.5);
+        path.push(["Q", ...p1.coords, ...mid.coords]);
+      }
+
+      p1 = p[i];
+      if (i + 1 < p.length) p2 = p[i + 1];
+    }
+
+    if (many) {
+      multX = p1.x > p[i - 2].x ? 1 : p1.x === p[i - 2].x ? 0 : -1;
+      multY = p1.y > p[i - 2].y ? 1 : p1.y === p[i - 2].y ? 0 : -1;
+    }
+
+    path.push(["L", p1.x + multX * corr, p1.y + multY * corr]);
+    path.push(path[0]);
+
+    return path;
+  }
+
   #parent: Canvas;
 
   #evs: SimplerEventMap<BrushEventMap> = new SimplerEventMap({
@@ -35,7 +74,7 @@ export class Brush {
   #createPath(): void {
     if (this.#points.length === 0) return;
 
-    const inst = smoothenPath(this.#points);
+    const inst = Brush.smoothenPath(this.#points);
 
     this.#points = [];
     this.#evs.fire("created", {
@@ -83,10 +122,10 @@ export class Brush {
       )
         this.#points.push(p);
 
-      const x = smoothenPath([...this.#points]);
+      const x = Brush.smoothenPath([...this.#points]);
 
       ctx.beginPath();
-      drawSvgPath(ctx, x, [0, 0]);
+      Path.drawSvgPath(ctx, x, [0, 0]);
       ctx.stroke();
     }
   }

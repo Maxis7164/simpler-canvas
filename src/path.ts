@@ -1,6 +1,5 @@
 import { Point } from "./point.js";
 import { SObject } from "./sobject.js";
-import { drawSvgPath, parseSVGPath } from "./utils.js";
 
 export interface PathExport extends SObjectExport {
   path: string;
@@ -26,6 +25,93 @@ export class Path extends SObject {
     return p;
   }
 
+  static parseSVGPath(path: string): SVGInstruction[] {
+    const p = path.split(" ");
+    const np: SVGInstruction[] = [];
+    let nxt: SVGInstruction = [p[0] as SVGInstructionType];
+
+    for (let i: number = 1; i < p.length; i++) {
+      const numi = parseInt(p[i]);
+
+      if (isNaN(numi)) {
+        np.push(nxt);
+        nxt = [p[i] as SVGInstructionType];
+      } else nxt.push(numi);
+    }
+
+    np.push(nxt);
+    return np;
+  }
+
+  static drawSvgPath(
+    ctx: CanvasRenderingContext2D,
+    svg: SVGInstruction[],
+    c: Coords | Point
+  ): void {
+    const a = c instanceof Point ? c : new Point(c);
+
+    let last: Coords = [0, 0];
+
+    ctx.beginPath();
+
+    svg.forEach((p) => {
+      const np: number[] = p
+        .filter((a) => typeof a === "number")
+        .map((coord, i) =>
+          i % 2 === 0 ? (coord as number) + a.x : (coord as number) + a.y
+        );
+
+      switch (p[0]) {
+        case "M":
+          ctx.moveTo(np[0], np[1]);
+          last = [np[0], np[1]];
+          break;
+        case "m":
+          ctx.moveTo(last[0] + np[0], last[1] + np[1]);
+          last = [last[0] + np[0], last[1] + np[1]];
+          break;
+        case "L":
+          ctx.lineTo(np[0], np[1]);
+          last = [np[0], np[1]];
+          break;
+        case "l":
+          ctx.lineTo(last[0] + np[0], last[1] + np[1]);
+          last = [last[0] + np[0], last[1] + np[1]];
+          break;
+        case "Q":
+          ctx.quadraticCurveTo(np[0], np[1], np[2], np[3]);
+          last = [np[2], np[3]];
+          break;
+        case "q":
+          ctx.quadraticCurveTo(
+            last[0] + np[0],
+            last[1] + np[1],
+            last[0] + np[2],
+            last[1] + np[3]
+          );
+          last = [last[0] + np[2], last[1] + np[3]];
+          break;
+        case "C":
+          ctx.bezierCurveTo(np[0], np[1], np[2], np[3], np[4], np[5]);
+          last = [np[5], np[6]];
+          break;
+        case "c":
+          ctx.bezierCurveTo(
+            last[0] + np[0],
+            last[1] + np[1],
+            last[0] + np[2],
+            last[1] + np[3],
+            last[1] + np[4],
+            last[1] + np[5]
+          );
+          last = [last[0] + np[4], last[1] + np[5]];
+          break;
+      }
+    });
+
+    ctx.closePath();
+  }
+
   static getMidOfQuadratic(
     b: Coords | Point,
     c: Coords | Point,
@@ -38,6 +124,7 @@ export class Path extends SObject {
 
     return bc.lerp(ce, 0.5);
   }
+
   static getExtremesOfCubic(
     sta: Point | Coords,
     ctrl1: Point | Coords,
@@ -148,7 +235,7 @@ export class Path extends SObject {
   constructor(path: SVGInstruction[] | string, opts?: Partial<SObjectOpts>) {
     super(opts);
 
-    this.#p = typeof path === "string" ? parseSVGPath(path) : path;
+    this.#p = typeof path === "string" ? Path.parseSVGPath(path) : path;
 
     this.#calcOwnBox();
     // if (opts) Path.applyOpts(this, opts);
@@ -164,7 +251,7 @@ export class Path extends SObject {
     ctx.lineWidth = this.weight;
     ctx.fillStyle = this.fill;
 
-    drawSvgPath(ctx, this.#p, this.coords);
+    Path.drawSvgPath(ctx, this.#p, this.coords);
 
     if (this.stroke) ctx.stroke();
     if (this.fill) ctx.fill();
