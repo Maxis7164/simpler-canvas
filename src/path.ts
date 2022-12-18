@@ -1,6 +1,6 @@
 import { Point } from "./point.js";
 import { SObject } from "./sobject.js";
-import { coordsToPoints, drawSvgPath, parseSVGPath } from "./utils.js";
+import { drawSvgPath, parseSVGPath } from "./utils.js";
 
 export interface PathExport extends SObjectExport {
   path: string;
@@ -31,7 +31,7 @@ export class Path extends SObject {
     c: Coords | Point,
     e: Coords | Point
   ): Point {
-    [b, c, e] = coordsToPoints(b, c, e);
+    [b, c, e] = Point.convert(true, b, c, e);
 
     const bc = b.lerp(c, 0.5);
     const ce = c.lerp(e, 0.5);
@@ -44,7 +44,7 @@ export class Path extends SObject {
     ctrl2: Point | Coords,
     end: Point | Coords
   ): Point[] {
-    [sta, ctrl1, ctrl2, end] = coordsToPoints(sta, ctrl1, ctrl2, end);
+    [sta, ctrl1, ctrl2, end] = Point.convert(true, sta, ctrl1, ctrl2, end);
 
     const ax = 3 * end.x - 9 * ctrl2.x + 9 * ctrl1.x - 3 * sta.x;
     const bx = 6 * ctrl2.x - 12 * ctrl1.x + 6 * sta.x;

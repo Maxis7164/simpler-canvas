@@ -1,16 +1,5 @@
 import { Point } from "./point.js";
 
-export function coordsToPoints(...coords: (Coords | Point)[]): Point[] {
-  return coords.map((p) => {
-    if (typeof p === "undefined")
-      throw new Error(
-        '[!] <Simpler Canvas> Invalid Coordinates: "undefined" is not a valid coordinate array or Point!'
-      );
-
-    return p instanceof Point ? p : new Point(p);
-  });
-}
-
 export function parseSVGPath(path: string): SVGInstruction[] {
   const p = path.split(" ");
   const np: SVGInstruction[] = [];

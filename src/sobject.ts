@@ -1,5 +1,4 @@
 import matrixInverse from "./dep.matrix-inverse.js";
-import { coordsToPoints } from "./utils.js";
 import type { Canvas } from "./canvas.js";
 import { Point } from "./point.js";
 
@@ -96,7 +95,7 @@ export class SObject {
   }
 
   contains(p: Point | Coords): boolean {
-    [p] = coordsToPoints(p);
+    [p] = Point.convert(true, p);
     p = new Point(SObject.applyInverseOnPoint(this.#m, p.coords));
 
     return (

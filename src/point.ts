@@ -1,12 +1,38 @@
+function formatError(str: string, param: Typed = {}): string {
+  return str.replace(/{{\s*(\w*)\s*}}/g, (_, key) => {
+    return param[key] ?? key;
+  });
+}
+
 export class Point {
-  static #coordsToPoints(...coords: (Point | Coords)[]): Point[] {
-    return coords.map((p) => {
-      if (typeof p === "undefined")
+  static readonly errors: Typed<string> = {
+    UNEXPECTED_TYPE:
+      "Unexpected Type: Expected type was {{t}}, got {{i}} instead!",
+    INVALID_RADIUS: "Invalid Radius: The radius of a point cannot be 0!",
+  };
+
+  static convert(coordsToPoints: true, ...poc: (Point | Coords)[]): Point[];
+  static convert(coordsToPoints: false, ...poc: (Point | Coords)[]): Coords[];
+  static convert(
+    coordsToPoints: boolean,
+    ...poc: (Point | Coords)[]
+  ): (Point | Coords)[] {
+    return poc.map((p) => {
+      if (!(p instanceof Point) && !Array.isArray(p))
         throw new Error(
-          '[!] <Simpler Canvas> Invalid Coordinates: "undefined" is not a valid coordinate array or Point!'
+          `[!] <Point.pointsToCoords> ${formatError(
+            Point.errors.UNEXPECTED_TYPE,
+            { t: "Point", i: typeof p }
+          )}`
         );
 
-      return p instanceof Point ? p : new Point(p);
+      return coordsToPoints
+        ? p instanceof Point
+          ? p
+          : new Point(p)
+        : p instanceof Point
+        ? p.coords
+        : p;
     });
   }
 
@@ -17,7 +43,7 @@ export class Point {
     p3: Point | Coords,
     t: number
   ): Point {
-    [p0, p1, p2, p3] = this.#coordsToPoints(p0, p1, p2, p3);
+    [p0, p1, p2, p3] = this.convert(true, p0, p1, p2, p3);
 
     const a = p0.lerp(p1, t);
     const b = p1.lerp(p2, t);
@@ -42,20 +68,20 @@ export class Point {
   }
 
   eq(p: Point | Coords): boolean {
-    [p] = Point.#coordsToPoints(p);
+    [p] = Point.convert(true, p);
     return this.#x === p.x && this.#y === p.y;
   }
   gt(p: Point | Coords): boolean {
-    [p] = Point.#coordsToPoints(p);
+    [p] = Point.convert(true, p);
     return this.#x > p.x && this.#y > p.y;
   }
   lt(p: Point | Coords): boolean {
-    [p] = Point.#coordsToPoints(p);
+    [p] = Point.convert(true, p);
     return this.#x < p.x && this.#y < p.y;
   }
 
   lerp(p: Point | Coords, t: number = 0.5): Point {
-    [p] = Point.#coordsToPoints(p);
+    [p] = Point.convert(true, p);
     return new Point([
       this.#x + (p.#x - this.#x) * t,
       this.#y + (p.#y - this.#y) * t,
@@ -66,20 +92,18 @@ export class Point {
     return new Point(this.coords);
   }
 
-  contains(p: Point | Coords, range: number): boolean {
-    if (range < 1) {
-      console.error(
-        "[!] <Simpler Canvas> Invalid Range: A range of a point cannot be less then 1!"
-      );
+  contains(p: Point | Coords, radius: number): boolean {
+    if (radius < 1) {
+      console.error(`[!] <Point.contains> ${Point.errors.INVALID_RANGE}`);
       return false;
     }
-    [p] = Point.#coordsToPoints(p);
+    [p] = Point.convert(true, p);
 
     return (
-      this.#x - range / 2 < p.#x &&
-      this.#x + range / 2 > p.#x &&
-      this.#y - range / 2 < p.#y &&
-      this.#y + range / 2 > p.#y
+      this.#x - radius / 2 < p.#x &&
+      this.#x + radius / 2 > p.#x &&
+      this.#y - radius / 2 < p.#y &&
+      this.#y + radius / 2 > p.#y
     );
   }
 
