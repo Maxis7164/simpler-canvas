@@ -62,7 +62,6 @@ export class Brush {
     } else {
       this.#parent.renderUpper();
       ctx.restore();
-
       this.#parent.renderUpper();
       this.#createPath();
     }

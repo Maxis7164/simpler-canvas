@@ -29,19 +29,6 @@ export function parseSVGPath(path: string): SVGInstruction[] {
   return np;
 }
 
-export function calcPointOnQuadraticCurve(
-  b: Coords | Point,
-  c: Coords | Point,
-  e: Coords | Point
-): Point {
-  [b, c, e] = coordsToPoints(b, c, e);
-
-  const bc = b.lerp(c, 0.5);
-  const ec = e.lerp(c, 0.5);
-
-  return bc.lerp(ec, 0.5);
-}
-
 export function smoothenPath(p: Point[], corr: number = 0): SVGInstruction[] {
   if (p.length < 2) return [];
 
@@ -49,8 +36,8 @@ export function smoothenPath(p: Point[], corr: number = 0): SVGInstruction[] {
   const many: boolean = p.length > 2;
 
   let i: number;
-  let p1 = new Point(p[0].coords);
-  let p2 = new Point(p[1].coords);
+  let p1 = p[0].clone();
+  let p2 = p[1].clone();
   let multX: number = 1;
   let multY: number = 0;
 
@@ -68,7 +55,6 @@ export function smoothenPath(p: Point[], corr: number = 0): SVGInstruction[] {
     }
 
     p1 = p[i];
-
     if (i + 1 < p.length) p2 = p[i + 1];
   }
 
@@ -150,4 +136,10 @@ export function drawSvgPath(
   });
 
   ctx.closePath();
+}
+
+export function formatError(str: string, param: Typed = {}): string {
+  return str.replace(/{{\s*(\w*)\s*}}/g, (_, key) => {
+    return param[key] ?? key;
+  });
 }

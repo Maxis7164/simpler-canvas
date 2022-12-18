@@ -10,11 +10,35 @@ export class Point {
     });
   }
 
+  static getPointOnBezier(
+    p0: Point | Coords,
+    p1: Point | Coords,
+    p2: Point | Coords,
+    p3: Point | Coords,
+    t: number
+  ): Point {
+    [p0, p1, p2, p3] = this.#coordsToPoints(p0, p1, p2, p3);
+
+    const a = p0.lerp(p1, t);
+    const b = p1.lerp(p2, t);
+    const c = p2.lerp(p3, t);
+
+    const ab = a.lerp(b, t);
+    const bc = b.lerp(c, t);
+
+    return ab.lerp(bc, t);
+  }
+
+  static readonly INVALID: Point = new Point([-999, -999], true);
+
+  #isInvalid: boolean = false;
   #x: number;
   #y: number;
 
-  constructor(p: Coords) {
+  constructor(p: Coords, invalid: boolean = false) {
     [this.#x, this.#y] = p;
+
+    this.#isInvalid = invalid;
   }
 
   eq(p: Point | Coords): boolean {
@@ -36,6 +60,10 @@ export class Point {
       this.#x + (p.#x - this.#x) * t,
       this.#y + (p.#y - this.#y) * t,
     ]);
+  }
+
+  clone(): Point {
+    return new Point(this.coords);
   }
 
   contains(p: Point | Coords, range: number): boolean {
@@ -67,5 +95,8 @@ export class Point {
   }
   get coords(): Coords {
     return [this.#x, this.#y];
+  }
+  get isInvalid(): boolean {
+    return this.#isInvalid;
   }
 }
