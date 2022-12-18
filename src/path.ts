@@ -129,6 +129,7 @@ export class Path extends SObject {
           if (low[1] > p[4]) low[1] = p[4];
           if (high[0] < p[3]) high[0] = p[3];
           if (high[1] < p[4]) high[1] = p[4];
+          break;
         }
       }
     });
