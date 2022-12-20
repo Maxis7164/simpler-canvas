@@ -93,15 +93,16 @@ export class SObject {
     p = SObject.applyInverseOnPoint(this.#m, p.coords);
 
     return (
-      p.gt([this.#x, this.#y]) && p.lt([this.#x + this.#w, this.#y + this.#h])
+      p.gt([this.#x - 0.5 * this.weight, this.#y - 0.5 * this.weight]) &&
+      p.lt([this.#x + this.#w + this.weight, this.#y + this.#h + this.weight])
     );
   }
   containedIn(box: Box): boolean {
     return (
-      this.#x > box[0] &&
-      this.#x + this.#w < box[0] + box[2] &&
-      this.#y > box[1] &&
-      this.#y + this.#h < box[1] + box[3]
+      this.#x - 0.5 * this.weight > box[0] &&
+      this.#x + this.#w + this.weight < box[0] + box[2] &&
+      this.#y + 0.5 * this.weight > box[1] &&
+      this.#y + this.#h + this.weight < box[1] + box[3]
     );
   }
 
@@ -133,7 +134,12 @@ export class SObject {
     return new Point([this.#x, this.#y]);
   }
   get box(): Box {
-    return [this.#x, this.#y, this.#w, this.#h];
+    return [
+      this.#x - 0.5 * this.weight,
+      this.#y - 0.5 * this.weight,
+      this.#w + this.weight,
+      this.#h + this.weight,
+    ];
   }
   get boundings(): Boundings {
     return [
