@@ -41,7 +41,7 @@ interface SObjectExport extends SObjectOpts {
 }
 
 type Matrix2x3 = [number, number, number, number, number, number];
-type Matrix2x2 = [number, number, number, number];
+type Dimension = [number, number];
 
 declare module "./src/matrix-inverse" {
   export = function fn(m: number[][]): number[][] {};

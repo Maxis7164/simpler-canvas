@@ -1,4 +1,5 @@
-import { formatError } from "./utils.js";
+import { Matrix } from "./matrix.js";
+import { formatMessage } from "./utils.js";
 
 export class Point {
   static readonly errors: Typed<string> = {
@@ -16,7 +17,7 @@ export class Point {
     return poc.map((p) => {
       if (!(p instanceof Point) && !Array.isArray(p))
         throw new Error(
-          `[!] <Point.pointsToCoords> ${formatError(
+          `[!] <Point.pointsToCoords> ${formatMessage(
             Point.errors.UNEXPECTED_TYPE,
             { t: "Point", i: typeof p }
           )}`
@@ -57,8 +58,9 @@ export class Point {
   #x: number;
   #y: number;
 
-  constructor(p: Coords, invalid: boolean = false) {
-    [this.#x, this.#y] = p;
+  constructor(p: Coords | Matrix, invalid: boolean = false) {
+    [this.#x, this.#y] =
+      p instanceof Matrix ? [p.entry(0, 0), p.entry(1, 0)] : p;
 
     this.#isInvalid = invalid;
   }

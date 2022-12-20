@@ -238,14 +238,13 @@ export class Path extends SObject {
     this.#p = typeof path === "string" ? Path.parseSVGPath(path) : path;
 
     this.#calcOwnBox();
-    // if (opts) Path.applyOpts(this, opts);
   }
 
   render(ctx: CanvasRenderingContext2D): void {
     ctx.save();
     ctx.beginPath();
 
-    ctx.transform(...this.matrix);
+    ctx.transform(...this.matrix.toCtxInterp());
 
     ctx.strokeStyle = this.stroke;
     ctx.lineWidth = this.weight;
@@ -256,6 +255,7 @@ export class Path extends SObject {
     if (this.stroke) ctx.stroke();
     if (this.fill) ctx.fill();
 
+    //? debug
     // ctx.strokeStyle = "#bf4566";
     // ctx.strokeRect(...this.box);
 

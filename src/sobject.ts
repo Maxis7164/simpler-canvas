@@ -1,6 +1,6 @@
-import matrixInverse from "./dep.matrix-inverse.js";
 import type { Canvas } from "./canvas.js";
 import { Point } from "./point.js";
+import { Matrix } from "./matrix.js";
 
 export class SObject {
   static selectionColor: string = "#54bdff";
@@ -27,24 +27,18 @@ export class SObject {
       y: obj.#y,
     };
   }
-  static calcOwnMatrix(obj: SObject): Matrix2x3 {
-    return [obj.#scaleX, 0, 0, obj.#scaleY, 0, 0];
-  }
-  static applyInverseOnPoint(m: Matrix2x3, p: Point | Coords): Coords {
+  static applyInverseOnPoint(m: Matrix, p: Point | Coords): Point {
     if (p instanceof Point) p = p.coords;
 
-    const i = matrixInverse([
-      [m[0], m[2], m[4]],
-      [m[1], m[3], m[5]],
-      [0, 0, 1],
-    ]);
+    const v = new Matrix([[p[0]], [p[1]], [0]]);
 
-    return [i[0][0] * p[0] + i[0][1] * p[1], i[1][0] * p[0] + i[1][1] * p[1]];
+    const i = m.getInverse();
+    return new Point(i.multiplyWith(v));
   }
 
   #selected: boolean = false;
 
-  #m: Matrix2x3 = [1, 0, 0, 1, 0, 0];
+  #m: Matrix = Matrix.getIdentity(3);
   #x: number = -1;
   #y: number = -1;
   #w: number = -1;
@@ -66,7 +60,7 @@ export class SObject {
     [this.#x, this.#y, this.#w, this.#h] = b;
   }
   move(dx: number, dy: number): void {
-    [dx, dy] = SObject.applyInverseOnPoint(this.#m, [dx, dy]);
+    [dx, dy] = SObject.applyInverseOnPoint(this.#m, [dx, dy]).coords;
 
     this.#x += dx;
     this.#y += dy;
@@ -87,7 +81,7 @@ export class SObject {
       this.#scaleY = v;
     }
 
-    this.#m = SObject.calcOwnMatrix(this);
+    this.#m = this.#m.scale(v, h);
   }
 
   setSelected(isSelected?: boolean): void {
@@ -96,7 +90,7 @@ export class SObject {
 
   contains(p: Point | Coords): boolean {
     [p] = Point.convert(true, p);
-    p = new Point(SObject.applyInverseOnPoint(this.#m, p.coords));
+    p = SObject.applyInverseOnPoint(this.#m, p.coords);
 
     return (
       p.gt([this.#x, this.#y]) && p.lt([this.#x + this.#w, this.#y + this.#h])
@@ -116,7 +110,7 @@ export class SObject {
   renderBox(ctx: CanvasRenderingContext2D): void {
     ctx.save();
     ctx.beginPath();
-    ctx.transform(...this.#m);
+    ctx.transform(...this.#m.toCtxInterp());
 
     ctx.strokeStyle = "#22ffbb";
     ctx.strokeRect(...this.box);
@@ -149,7 +143,7 @@ export class SObject {
       new Point([this.#x, this.#y + this.#w]),
     ];
   }
-  get matrix(): Matrix2x3 {
+  get matrix(): Matrix {
     return this.#m;
   }
 }
