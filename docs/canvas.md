@@ -1,10 +1,24 @@
-# Canvas - 0.2.0-alpha
+# Canvas - 0.4.0-alpha
 
 ```ts
 class Canvas {
+  get drawModeActive(): boolean;
+  get backgroundColor(): string;
+  get overlayColor(): string;
+  get height(): number;
+  get width(): number;
+
   constructor(parent: HTMLElement, opts?: Partial<CanvasOpts>);
 
+  getSelectedObjects(): SObject[];
+
+  backward(obj: SObject): void;
+  toBack(obj: SObject): void;
+  forward(obj: SObject): void;
+  toFront(obj: SObject): void;
+
   add(...objs: SObject[]): void;
+  remove(...objs: SObject[]): void;
 
   getCoords(p: Coords | Point): Point;
 
@@ -23,7 +37,143 @@ class Canvas {
   renderUpper(): void;
   render(): void;
 
-  toJSON(): CanvasExport;
   toObject(): CanvasExport;
+
+  loadFromJSON(json: string): void;
+  loadFromObject(ex: CanvasExport): void;
+
+  toJSON(): CanvasExport;
 }
 ```
+
+## **Properties**
+
+### _get_ drawModeActive
+
+Describes the current draw mode state. If no `Brush` was set before, this value will always be false.
+
+### _get_ backgroundColor
+
+The background color of the canvas.
+
+### _get_ overlayColor
+
+The color of the canvas' overlay.
+
+### _get_ height
+
+The height of the canvas.
+
+### _get_ width
+
+The width of the canvas.
+
+## **Constructor**
+
+### parent
+
+The parent `HTMLElement` the canvas should be appended to.
+
+### opts
+
+Any optional settings for the canvas e. g. the background color.
+
+## **Methods**
+
+### getSelectedObjects
+
+Returns an array of all currently selected objects of the canvas.
+
+### backward
+
+Sends an object of the canvas back a layer.
+
+This function will call `renderLower()` when it's done.
+
+### toBack
+
+Sends an object of the canvas to the back.
+
+This function will call `renderLower()` when it's done.
+
+### forward
+
+Sends an object of the canvas forward a layer.
+
+This function will call `renderLower()` when it's done.
+
+### toFront
+
+Sends an object of the canvas to the front.
+
+This function will call `renderLower()` when it's done.
+
+### add
+
+Adds the given objects to the canvas.
+
+This function will call `renderLower()` when it's done.
+
+### remove
+
+Removes the given objects from the canvas.
+
+This function will call `renderLower()` when it's done.
+
+### getCoords
+
+Converts page coordinates to canvas coordinates.
+
+### applyOptions
+
+Applys `CanvasOpts` to the canvas.
+
+### setBackground
+
+Sets the background or overlay of the canvas to an image or a color.
+
+### setSize
+
+Sets the size of the canvas.
+
+### setDrawMode
+
+Sets the draw mode of the canvas. If no `Brush` was set before, this will do nothing.
+
+### setBrush
+
+Links a `Brush` to the canvas.
+
+### on
+
+Allows you to listen to canvas events specified in `SCanvasEventMap`.
+
+### renderLower
+
+Renders all objects to the canvas. It will render the complete lower canvas.
+
+### renderUpper
+
+Renders selections, etc. to the upper canvas.
+
+### render
+
+Renders the canvas and applies its size and colors. This function combines `renderLower` and `renderUpper`.
+
+### toObject
+
+Exports the canvas as an object.
+
+### loadFromJSON
+
+Loads the canvas export object in JSON format.
+
+### loadFromObject
+
+Loads the canvas export object.
+
+### toJSON
+
+This function allows you to use the instance as an argument for the `JSON.stringify` function.
+
+This function is used by JSON.stringify.

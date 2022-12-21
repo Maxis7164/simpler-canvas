@@ -3,9 +3,16 @@ import { Point } from "./point.js";
 import { Matrix } from "./matrix.js";
 
 export class SObject {
-  static selectionColor: string = "#54bdff";
+  static #applyInverseOnPoint(m: Matrix, p: Point | Coords): Point {
+    if (p instanceof Point) p = p.coords;
 
-  static applyOpts(obj: SObject, opts: Partial<SObjectOpts>) {
+    const v = new Matrix([[p[0]], [p[1]], [0]]);
+
+    const i = m.getInverse();
+    return new Point(i.multiplyWith(v));
+  }
+
+  static applyOpts(obj: SObject, opts: Partial<SObjectOpts>): void {
     if (opts.selectable) obj.selectable = opts.selectable;
     if (opts.stroke) obj.stroke = opts.stroke;
     if (opts.weight) obj.weight = opts.weight;
@@ -26,14 +33,6 @@ export class SObject {
       x: obj.#x,
       y: obj.#y,
     };
-  }
-  static applyInverseOnPoint(m: Matrix, p: Point | Coords): Point {
-    if (p instanceof Point) p = p.coords;
-
-    const v = new Matrix([[p[0]], [p[1]], [0]]);
-
-    const i = m.getInverse();
-    return new Point(i.multiplyWith(v));
   }
 
   #selected: boolean = false;
@@ -60,7 +59,7 @@ export class SObject {
     [this.#x, this.#y, this.#w, this.#h] = b;
   }
   move(dx: number, dy: number): void {
-    [dx, dy] = SObject.applyInverseOnPoint(this.#m, [dx, dy]).coords;
+    [dx, dy] = SObject.#applyInverseOnPoint(this.#m, [dx, dy]).coords;
 
     this.#x += dx;
     this.#y += dy;
@@ -90,7 +89,7 @@ export class SObject {
 
   contains(p: Point | Coords): boolean {
     [p] = Point.convert(true, p);
-    p = SObject.applyInverseOnPoint(this.#m, p.coords);
+    p = SObject.#applyInverseOnPoint(this.#m, p.coords);
 
     return (
       p.gt([this.#x - 0.5 * this.weight, this.#y - 0.5 * this.weight]) &&

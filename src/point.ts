@@ -33,7 +33,7 @@ export class Point {
     });
   }
 
-  static getPointOnBezier(
+  static getPointOnCubic(
     p0: Point | Coords,
     p1: Point | Coords,
     p2: Point | Coords,
@@ -92,7 +92,7 @@ export class Point {
 
   contains(p: Point | Coords, radius: number): boolean {
     if (radius < 1) {
-      console.error(`[!] <Point.contains> ${Point.errors.INVALID_RANGE}`);
+      console.error(`[!] <Point.contains> ${Point.errors.INVALID_RADIUS}`);
       return false;
     }
     [p] = Point.convert(true, p);
@@ -103,10 +103,6 @@ export class Point {
       this.#y - radius / 2 < p.#y &&
       this.#y + radius / 2 > p.#y
     );
-  }
-
-  toString(): string {
-    return `${this.#x}, ${this.#y}`;
   }
 
   get x(): number {

@@ -25,6 +25,10 @@ export class Matrix {
     return sl ? [m.length, l[0]] : [-1, -1];
   }
 
+  static #degreesToRadians(d: number): number {
+    return (Math.PI * d) / 180;
+  }
+
   /** @param { number } n The number of rows and columns of the identity matrix */
   static getIdentity(n: number): Matrix {
     const m: number[][] = Array(n);
@@ -38,10 +42,6 @@ export class Matrix {
     }
 
     return new Matrix(m);
-  }
-
-  static degreesToRadians(d: number): number {
-    return (Math.PI * d) / 180;
   }
 
   #dim: Dimension;
@@ -117,6 +117,7 @@ export class Matrix {
   getInverse(): Matrix {
     return new Matrix(matrixInverse(this.#m));
   }
+
   scale(v?: number, h?: number): Matrix {
     const r = [...this.#m];
 
@@ -128,7 +129,7 @@ export class Matrix {
   rotate(angle: number): Matrix {
     const og = [...this.#m];
 
-    const r = Matrix.degreesToRadians(angle);
+    const r = Matrix.#degreesToRadians(angle);
 
     og[0][0] = og[0][0] * Math.cos(r);
     og[0][1] = og[0][1] * -Math.sin(r);
@@ -138,9 +139,6 @@ export class Matrix {
     return new Matrix([...og]);
   }
 
-  toJSON(): number[][] {
-    return this.toArray();
-  }
   toArray(): number[][] {
     return [...this.#m];
   }

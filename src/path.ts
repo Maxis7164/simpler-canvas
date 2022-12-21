@@ -12,20 +12,61 @@ export class Path extends SObject {
       "Invalid Point Received: Received an invalid point from a trusted source.",
   };
 
-  static hydrate(obj: PathExport): Path {
-    const p = new Path(obj.path, {
-      fill: obj.fill,
-      selectable: obj.selectable,
-      stroke: obj.stroke,
-      weight: obj.weight,
-    });
+  static #getMidOfQuadratic(
+    b: Coords | Point,
+    c: Coords | Point,
+    e: Coords | Point
+  ): Point {
+    [b, c, e] = Point.convert(true, b, c, e);
 
-    p.setPosition([obj.x, obj.y]);
+    const bc = b.lerp(c, 0.5);
+    const ce = c.lerp(e, 0.5);
 
-    return p;
+    return bc.lerp(ce, 0.5);
   }
 
-  static parseSVGPath(path: string): SVGInstruction[] {
+  static #getExtremesOfCubic(
+    sta: Point | Coords,
+    ctrl1: Point | Coords,
+    ctrl2: Point | Coords,
+    end: Point | Coords
+  ): Point[] {
+    [sta, ctrl1, ctrl2, end] = Point.convert(true, sta, ctrl1, ctrl2, end);
+
+    const ax = 3 * end.x - 9 * ctrl2.x + 9 * ctrl1.x - 3 * sta.x;
+    const bx = 6 * ctrl2.x - 12 * ctrl1.x + 6 * sta.x;
+    const cx = 3 * ctrl1.x - 3 * sta.x;
+    const ay = 3 * end.y - 9 * ctrl2.y + 9 * ctrl1.y - 3 * sta.y;
+    const by = 6 * ctrl2.y - 12 * ctrl1.y + 6 * sta.y;
+    const cy = 3 * ctrl1.y - 3 * sta.y;
+
+    const xrt = Math.sqrt(bx ** 2 - 4 * ax * cx);
+    const yrt = Math.sqrt(by ** 2 - 4 * ay * cy);
+
+    const tx1 = (-bx + xrt) / (2 * ax);
+    const tx2 = (-bx - xrt) / (2 * ax);
+    const ty1 = (-by + yrt) / (2 * ay);
+    const ty2 = (-by - yrt) / (2 * ay);
+
+    const res: Point[] = [
+      0 < tx1 && tx1 < 1
+        ? Point.getPointOnCubic(sta, ctrl1, ctrl2, end, tx1)
+        : Point.INVALID,
+      0 < tx2 && tx2 < 1
+        ? Point.getPointOnCubic(sta, ctrl1, ctrl2, end, tx2)
+        : Point.INVALID,
+      0 < ty1 && ty1 < 1
+        ? Point.getPointOnCubic(sta, ctrl1, ctrl2, end, ty1)
+        : Point.INVALID,
+      0 < ty2 && ty2 < 1
+        ? Point.getPointOnCubic(sta, ctrl1, ctrl2, end, ty2)
+        : Point.INVALID,
+    ];
+
+    return res.filter((p) => !p.isInvalid);
+  }
+
+  static #parseSVGPath(path: string): SVGInstruction[] {
     const p = path.split(" ");
     const np: SVGInstruction[] = [];
     let nxt: SVGInstruction = [p[0] as SVGInstructionType];
@@ -41,6 +82,19 @@ export class Path extends SObject {
 
     np.push(nxt);
     return np;
+  }
+
+  static hydrate(obj: PathExport): Path {
+    const p = new Path(obj.path, {
+      fill: obj.fill,
+      selectable: obj.selectable,
+      stroke: obj.stroke,
+      weight: obj.weight,
+    });
+
+    p.setPosition([obj.x, obj.y]);
+
+    return p;
   }
 
   static drawSvgPath(
@@ -112,60 +166,6 @@ export class Path extends SObject {
     ctx.closePath();
   }
 
-  static getMidOfQuadratic(
-    b: Coords | Point,
-    c: Coords | Point,
-    e: Coords | Point
-  ): Point {
-    [b, c, e] = Point.convert(true, b, c, e);
-
-    const bc = b.lerp(c, 0.5);
-    const ce = c.lerp(e, 0.5);
-
-    return bc.lerp(ce, 0.5);
-  }
-
-  static getExtremesOfCubic(
-    sta: Point | Coords,
-    ctrl1: Point | Coords,
-    ctrl2: Point | Coords,
-    end: Point | Coords
-  ): Point[] {
-    [sta, ctrl1, ctrl2, end] = Point.convert(true, sta, ctrl1, ctrl2, end);
-
-    const ax = 3 * end.x - 9 * ctrl2.x + 9 * ctrl1.x - 3 * sta.x;
-    const bx = 6 * ctrl2.x - 12 * ctrl1.x + 6 * sta.x;
-    const cx = 3 * ctrl1.x - 3 * sta.x;
-    const ay = 3 * end.y - 9 * ctrl2.y + 9 * ctrl1.y - 3 * sta.y;
-    const by = 6 * ctrl2.y - 12 * ctrl1.y + 6 * sta.y;
-    const cy = 3 * ctrl1.y - 3 * sta.y;
-
-    const xrt = Math.sqrt(bx ** 2 - 4 * ax * cx);
-    const yrt = Math.sqrt(by ** 2 - 4 * ay * cy);
-
-    const tx1 = (-bx + xrt) / (2 * ax);
-    const tx2 = (-bx - xrt) / (2 * ax);
-    const ty1 = (-by + yrt) / (2 * ay);
-    const ty2 = (-by - yrt) / (2 * ay);
-
-    const res: Point[] = [
-      0 < tx1 && tx1 < 1
-        ? Point.getPointOnBezier(sta, ctrl1, ctrl2, end, tx1)
-        : Point.INVALID,
-      0 < tx2 && tx2 < 1
-        ? Point.getPointOnBezier(sta, ctrl1, ctrl2, end, tx2)
-        : Point.INVALID,
-      0 < ty1 && ty1 < 1
-        ? Point.getPointOnBezier(sta, ctrl1, ctrl2, end, ty1)
-        : Point.INVALID,
-      0 < ty2 && ty2 < 1
-        ? Point.getPointOnBezier(sta, ctrl1, ctrl2, end, ty2)
-        : Point.INVALID,
-    ];
-
-    return res.filter((p) => !p.isInvalid);
-  }
-
   #p: SVGInstruction[];
 
   #calcOwnBox(): void {
@@ -184,7 +184,7 @@ export class Path extends SObject {
           last = [p[1], p[2]];
           break;
         case "Q": {
-          const q = Path.getMidOfQuadratic(last, [p[1], p[2]], [p[3], p[4]]);
+          const q = Path.#getMidOfQuadratic(last, [p[1], p[2]], [p[3], p[4]]);
 
           if (low[0] > q.x) low[0] = q.x;
           if (low[1] > q.y) low[1] = q.y;
@@ -198,7 +198,7 @@ export class Path extends SObject {
           break;
         }
         case "C": {
-          const c = Path.getExtremesOfCubic(
+          const c = Path.#getExtremesOfCubic(
             last,
             [p[1], p[2]],
             [p[3], p[4]],
@@ -235,7 +235,7 @@ export class Path extends SObject {
   constructor(path: SVGInstruction[] | string, opts?: Partial<SObjectOpts>) {
     super(opts);
 
-    this.#p = typeof path === "string" ? Path.parseSVGPath(path) : path;
+    this.#p = typeof path === "string" ? Path.#parseSVGPath(path) : path;
 
     this.#calcOwnBox();
   }

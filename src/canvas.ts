@@ -2,7 +2,7 @@ import { Callback, SimplerEventMap, Unsubscribe } from "./events.js";
 import { Path, PathExport } from "./path.js";
 import { Selection } from "./selection.js";
 import { SObject } from "./sobject.js";
-import { Layered } from "./layer.js";
+import { Layered } from "./layered.js";
 import { Brush } from "./brush.js";
 import { Point } from "./point.js";
 
@@ -223,7 +223,7 @@ export class Canvas {
     if (h > 0) this.#h = h * devicePixelRatio;
   }
   setDrawMode(active?: boolean): void {
-    this.#drawMode = active ?? !this.#drawMode;
+    this.#drawMode = this.#brush ? active ?? !this.#drawMode : false;
   }
 
   setBrush(b?: Brush | null): void {
@@ -312,8 +312,5 @@ export class Canvas {
   }
   get width(): number {
     return this.#w;
-  }
-  get dimensions(): [number, number] {
-    return [this.#h, this.#w];
   }
 }
