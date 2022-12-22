@@ -6,8 +6,10 @@ import { Path } from "./path.js";
 
 interface BrushOpts {
   lineJoin: CanvasLineJoin;
+  straightenAfter: number;
   lineCap: CanvasLineCap;
   miterLimit: number;
+  straight: boolean;
   color: string;
   width: number;
 }
@@ -17,6 +19,15 @@ interface BrushEventMap extends Typed {
 }
 
 export class Brush {
+  static #getRotationAngle(p0: Point, p1: Point): number {
+    const a = p1.x - p0.x;
+    const b = p1.y - p0.y;
+
+    const angle = Math.atan(a / b);
+
+    return Math.round((((angle * 180) / Math.PI) * 1000) / 1000);
+  }
+
   static smoothenPath(p: Point[], corr: number = 0): SVGInstruction[] {
     if (p.length < 2) return [];
 
@@ -63,10 +74,13 @@ export class Brush {
     created: new SimplerEvent("created"),
   });
 
+  #str8end: boolean = false;
   #draw: boolean = false;
   #points: Point[] = [];
+  #to: number = -1;
 
   #join: CanvasLineJoin = "miter";
+  #straightenAfter: number = 0;
   #cap: CanvasLineCap = "butt";
   #miter: number = 10.0;
   #w: number = 1;
@@ -82,12 +96,80 @@ export class Brush {
     });
   }
 
+  #straighten(ctx: CanvasRenderingContext2D): void {
+    const [p0, p1] = (this.#points = [
+      this.#points[0],
+      this.#points[this.#points.length - 1],
+    ]);
+
+    ctx.clearRect(0, 0, this.#parent.width, this.#parent.height);
+    this.#parent.renderUpper();
+
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+
+    this.#str8end = this.straight = true;
+  }
+
+  #straightDraw(p: Point, ctx: CanvasRenderingContext2D): void {
+    if (this.#points.length === 0) {
+      this.#points[0] = p;
+      return;
+    } else this.#points[1] = p;
+    this.#parent.renderUpper();
+
+    let [p0, p1] = this.#points;
+    const tol: number = 5;
+    // const a = p0.x - p1.x;
+    // const b = p0.x - p1.x;
+
+    const rot = Brush.#getRotationAngle(p0, p);
+    if (Math.abs(rot) < tol + 90 && Math.abs(rot) > -tol + 90)
+      p1 = this.#points[1] = new Point([p1.x, p0.y]);
+    else if (Math.abs(rot) < tol && Math.abs(rot) > -tol)
+      p1 = this.#points[1] = new Point([p0.x, p1.y]);
+    // else if (rot < tol + 45 && rot > -tol + 45)
+    //   p1 = this.#points[1] = new Point([
+    //     p0.x + -a * 0.7071067811865, //? Math.cos(Math.PI / 4)
+    //     p0.y + -b * 0.7071067811865, //? Math.sin(Math.PI / 4)
+    //   ]);
+    // else if (rot < tol - 45 && rot > -tol - 45)
+    //   p1 = this.#points[1] = new Point([
+    //     p0.x - a * 0.7071067811865,
+    //     p0.y + b * 0.7071067811865,
+    //   ]);
+
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+  }
+  #freeDraw(p: Point, ctx: CanvasRenderingContext2D): void {
+    if (
+      this.#points.length < 1 ||
+      !p.contains(this.#points[this.#points.length - 1], 5)
+    )
+      this.#points.push(p);
+
+    const x = Brush.smoothenPath([...this.#points]);
+
+    ctx.beginPath();
+    Path.drawSvgPath(ctx, x, [0, 0]);
+    ctx.stroke();
+
+    if (this.#straightenAfter > 0)
+      this.#to = setTimeout(() => this.#straighten(ctx), this.#straightenAfter);
+  }
+
   constructor(cv: Canvas, opts?: Partial<BrushOpts>) {
     this.#parent = cv;
 
     if (opts) this.applyOpts(opts);
   }
 
+  straight: boolean = false;
   color: string = "#000000";
 
   onUpDown(e: PointerEvent, ctx: CanvasRenderingContext2D): void {
@@ -99,6 +181,11 @@ export class Brush {
       ctx.save();
       ctx.beginPath();
     } else {
+      clearTimeout(this.#to);
+      this.#to = -1;
+
+      if (this.#str8end) this.#str8end = this.straight = false;
+
       this.#parent.renderUpper();
       ctx.restore();
       this.#parent.renderUpper();
@@ -106,6 +193,9 @@ export class Brush {
     }
   }
   onMove(e: PointerEvent, ctx: CanvasRenderingContext2D): void {
+    clearTimeout(this.#to);
+    this.#to = -1;
+
     if (this.#draw) {
       const p = this.#parent.getCoords([e.x, e.y]);
       ctx.strokeStyle = this.color;
@@ -116,22 +206,15 @@ export class Brush {
       ctx.lineWidth = this.#w;
       ctx.lineCap = this.#cap;
 
-      if (
-        this.#points.length < 1 ||
-        !p.contains(this.#points[this.#points.length - 1], 5)
-      )
-        this.#points.push(p);
-
-      const x = Brush.smoothenPath([...this.#points]);
-
-      ctx.beginPath();
-      Path.drawSvgPath(ctx, x, [0, 0]);
-      ctx.stroke();
+      if (this.straight) this.#straightDraw(p, ctx);
+      else this.#freeDraw(p, ctx);
     }
   }
 
   applyOpts(opts: Partial<BrushOpts>): void {
+    if (opts.straightenAfter) this.#straightenAfter = opts.straightenAfter;
     if (opts.miterLimit) this.#miter = opts.miterLimit;
+    if (opts.straight) this.straight = opts.straight;
     if (opts.lineJoin) this.#join = opts.lineJoin;
     if (opts.lineCap) this.#cap = opts.lineCap;
     if (opts.color) this.color = opts.color;
@@ -171,5 +254,12 @@ export class Brush {
   }
   get miterLimit(): number {
     return this.#miter;
+  }
+
+  set straightenAfter(n: number) {
+    this.#straightenAfter = n;
+  }
+  get straightenAfter(): number {
+    return this.#straightenAfter;
   }
 }

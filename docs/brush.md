@@ -5,7 +5,9 @@ class Brush {
   static smoothenPath(p: Point[], corr: number = 0): SVGInstruction[];
 
   join: CanvasLineJoin = "miter";
+  straightenAfter: number = 0;
   cap: CanvasLineCap = "butt";
+  straight: boolean = false;
   color: string = "#000000";
   miter: number = 10.0;
   width: number = 1;
@@ -49,6 +51,14 @@ Determines how far the outside connection point can be placed from the inside co
 ### width
 
 Determines the width of the path. The width has to be greater than 0.
+
+### straight
+
+Determines if the brush draws lines or points.
+
+### straightenAfter
+
+If greater than zero and if `straight = false`, it will straighten the points array by removing every point other than the first or last. This will happen after an amount of milliseconds, which is speficied by the value of `straightenAfter`. If straighten, the brush cannot be converted to point mode until the line has been drawn.
 
 ## **Constructor**
 
