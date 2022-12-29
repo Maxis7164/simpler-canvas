@@ -81,7 +81,7 @@ export class Selection {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    if (!this.#e || this.#finalized) return;
+    if (!this.#e) return;
 
     this.#calcBox();
 
@@ -92,21 +92,11 @@ export class Selection {
     ctx.strokeStyle = Selection.color;
     ctx.stroke();
 
-    ctx.fillStyle = Selection.color;
-    ctx.globalAlpha = 0.4;
-    ctx.fill();
-
-    ctx.restore();
-  }
-  renderTop(ctx: CanvasRenderingContext2D): void {
-    ctx.save();
-    ctx.beginPath();
-
-    if (this.#box === null) this.#calcBox();
-
-    ctx.rect(...this.box!);
-    ctx.strokeStyle = Selection.color;
-    ctx.stroke();
+    if (!this.#finalized) {
+      ctx.fillStyle = Selection.color;
+      ctx.globalAlpha = 0.4;
+      ctx.fill();
+    }
 
     ctx.restore();
   }

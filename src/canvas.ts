@@ -266,7 +266,7 @@ export class Canvas {
     this.#uctx.clearRect(0, 0, this.#w, this.#h);
 
     if (this.#sel) {
-      if (this.#sel.isFinalized) this.#sel.renderTop(this.#uctx);
+      if (this.#sel.isFinalized) this.#sel.render(this.#uctx);
       else this.#sel.render(this.#uctx);
     }
 
