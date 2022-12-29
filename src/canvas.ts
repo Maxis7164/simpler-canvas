@@ -317,6 +317,19 @@ export class Canvas {
     this.add(...nxt);
   }
 
+  attachSelection(sel: Selection): void {
+    const box = sel.box!;
+
+    if (box) {
+      this.#objs.forEach((obj) => obj.setSelected(obj.containedIn(box)));
+      sel.finalize(...this.getSelectedObjects());
+
+      if (sel.box && sel.box[2] !== 0 && sel.box[3] !== 0) this.#sel = sel;
+    }
+
+    this.renderUpper();
+  }
+
   get drawModeActive(): boolean {
     return this.#drawMode;
   }

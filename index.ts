@@ -3,6 +3,7 @@ import { SObject } from "./src/sobject";
 import { Matrix } from "./src/matrix";
 import { Canvas } from "./src/canvas";
 import { Brush } from "./src/brush";
+import { Point } from "./src/point";
 import { Path } from "./src/path";
 
-export { Selection, SObject, Canvas, Brush, Path, Matrix };
+export { Selection, SObject, Canvas, Brush, Path, Matrix, Point };

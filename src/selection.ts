@@ -2,7 +2,7 @@ import { SObject } from "./sobject.js";
 import { Point } from "./point.js";
 
 export class Selection {
-  static color: string = "#2376df";
+  static color: string = "#22ffbb";
 
   #member: SObject[] = [];
   #finalized: boolean = false;
@@ -37,8 +37,11 @@ export class Selection {
     }
   }
 
-  constructor(s: Coords | Point) {
+  constructor(s: Coords | Point, e?: Coords | Point) {
     this.#s = !(s instanceof Point) ? new Point(s) : s;
+    if (e) this.#e = !(e instanceof Point) ? new Point(e) : e;
+
+    this.#calcBox();
   }
 
   finalize(...memb: SObject[]): void {
