@@ -107,12 +107,12 @@ export class SObject {
 
   render(ctx: CanvasRenderingContext2D): void {}
 
-  renderBox(ctx: CanvasRenderingContext2D): void {
+  renderBox(ctx: CanvasRenderingContext2D, clr: string): void {
     ctx.save();
     ctx.beginPath();
     ctx.transform(...this.#m.toCtxInterp());
 
-    ctx.strokeStyle = "#22ffbb";
+    ctx.strokeStyle = clr;
     ctx.strokeRect(...this.box);
 
     ctx.restore();
@@ -129,8 +129,20 @@ export class SObject {
   get selected(): boolean {
     return this.#selected;
   }
-  get coords(): Point {
-    return new Point([this.#x, this.#y]);
+  get x(): number {
+    return this.#x;
+  }
+  get y(): number {
+    return this.#y;
+  }
+  get width(): number {
+    return this.#w;
+  }
+  get height(): number {
+    return this.#h;
+  }
+  get coords(): Coords {
+    return [this.#x, this.#y];
   }
   get box(): Box {
     return [

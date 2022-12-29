@@ -78,6 +78,15 @@ export class Point {
     return this.#x < p.x && this.#y < p.y;
   }
 
+  add(p: Point): Point;
+  add(dp: Coords): Point;
+  add(dp: Point | Coords): Point {
+    return new Point([
+      this.#x + (dp instanceof Point ? dp.x : dp[0]),
+      this.#y + (dp instanceof Point ? dp.y : dp[1]),
+    ]);
+  }
+
   lerp(p: Point | Coords, t: number = 0.5): Point {
     [p] = Point.convert(true, p);
     return new Point([

@@ -91,19 +91,27 @@ export class Canvas {
 
   #unselect(): void {
     this.#objs.forEach((obj) => obj.setSelected(false));
+    this.#sel = null;
   }
   #getTargets(pos: Coords | Point): SObject[] {
     return this.#objs.filter((obj) => obj.contains(pos));
+  }
+  #getTarget(pos: Coords | Point): SObject | null {
+    return this.#objs.find((obj) => obj.contains(pos)) ?? null;
   }
 
   #onUpDown(e: PointerEvent): void {
     this.#isDown = e.type === "pointerdown";
     const p = this.getCoords([e.x, e.y]);
     const t = new Layered(...this.#getTargets(p));
+    const target = this.#getTarget(p);
 
     if (this.#drawMode && this.#brush) this.#brush.onUpDown(e, this.#uctx);
     else if (this.#isDown) {
-      if (this.getSelectedObjects().length === 0 || !e.ctrlKey) {
+      if (this.#sel && this.#sel.isFinalized) {
+        if ((target && !this.#sel.isMember(target)) || !this.#sel.contains(p))
+          this.#unselect();
+      } else if (this.getSelectedObjects().length === 0 || !e.ctrlKey) {
         this.#unselect();
 
         if (t.length > 0) t[t.lastIndex].setSelected(true);
@@ -111,12 +119,15 @@ export class Canvas {
       }
     } else {
       if (this.#sel) {
-        const box = this.#sel?.getBox()!;
+        const box = this.#sel?.box!;
 
-        if (box)
+        if (box) {
           this.#objs.forEach((obj) => obj.setSelected(obj.containedIn(box)));
+          this.#sel.finalize(...this.getSelectedObjects());
 
-        this.#sel = null;
+          if (this.#sel.box && this.#sel.box[2] === 0 && this.#sel.box[3] === 0)
+            this.#sel = null;
+        }
       }
     }
 
@@ -132,12 +143,16 @@ export class Canvas {
         const s = this.getSelectedObjects();
 
         if (this.#sel) {
-          this.#sel.setEnd(p);
-          this.renderUpper();
+          if (this.#sel.isFinalized) {
+            this.#sel.move(e.movementX, e.movementY);
+            this.render();
+          } else {
+            this.#sel.setEnd(p);
+            this.renderUpper();
+          }
         } else if (s.length > 0) {
           s.forEach((obj) => obj.move(e.movementX, e.movementY));
-          this.renderUpper();
-          this.renderLower();
+          this.render();
         }
       }
     }
@@ -250,9 +265,13 @@ export class Canvas {
   renderUpper(): void {
     this.#uctx.clearRect(0, 0, this.#w, this.#h);
 
-    if (this.#sel) this.#sel.render(this.#uctx);
+    if (this.#sel) {
+      if (this.#sel.isFinalized) this.#sel.renderTop(this.#uctx);
+      else this.#sel.render(this.#uctx);
+    }
+
     this.#objs.forEach((obj) =>
-      obj.selected ? obj.renderBox(this.#uctx) : null
+      obj.selected ? obj.renderBox(this.#uctx, Selection.color) : null
     );
   }
   render(): void {
