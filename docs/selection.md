@@ -1,6 +1,6 @@
 # Selection - 0.5.0a
 
-`Selection` initiates an selection field on the canvas to which it gets attached. When finalized, it will be the size of all contained `SObjects`. If no objects are inside the selection box, the selection will get closed on the attached `Canvas`.
+`Selection` initiates an selection field on the canvas to which it gets attached. When finalized, it will be the size of all contained `SObjects`. If no objects are inside the selection box, the selection will get closed.
 
 ```typescript
 class Selection {
@@ -65,6 +65,8 @@ The ending point of the selection.
 Finalizes the selection making it ready for any selection-specific operations, such like `move`.
 
 _This method is reserved for `Canvas`._
+
+_This method can only be executed once!_
 
 ### setEnd
 
