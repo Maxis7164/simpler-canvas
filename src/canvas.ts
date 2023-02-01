@@ -15,6 +15,13 @@ interface CanvasOpts {
   height: number;
   width: number;
 }
+export interface CanvasBrushEvent {
+  ctx: CanvasRenderingContext2D;
+  target: SObject | null;
+  pointer: Point;
+  render: () => void;
+  clear: () => void;
+}
 
 export class Canvas {
   static #setup(
@@ -37,7 +44,7 @@ export class Canvas {
     return [w, l, u];
   }
 
-  #evs: SimplerEventMap<SCanvasEventMap> = new SimplerEventMap({});
+  // #evs: SimplerEventMap<SCanvasEventMap> = new SimplerEventMap({});
 
   #wr: HTMLElement;
   #lcv: HTMLCanvasElement;
@@ -46,7 +53,7 @@ export class Canvas {
   #lctx: CanvasRenderingContext2D;
   #uctx: CanvasRenderingContext2D;
 
-  #unsub: Unsubscribe | null = null;
+  // #unsub: Unsubscribe | null = null;
   #brush: Brush | null = null;
 
   #bg: string = "";
@@ -60,6 +67,19 @@ export class Canvas {
   #sel?: Selection | null = null;
   #drawMode: boolean = false;
   #isDown: boolean = false;
+
+  #makeCanvasBrushEvent(
+    ctx: CanvasRenderingContext2D,
+    p: Point
+  ): CanvasBrushEvent {
+    return {
+      target: this.#getTarget(p),
+      pointer: p,
+      ctx,
+      render: () => this.renderUpper(),
+      clear: () => null,
+    };
+  }
 
   #applyOwnSize(): void {
     this.#lcv.height = this.#ucv.height = this.#h;
@@ -106,8 +126,13 @@ export class Canvas {
     const t = new Layered(...this.#getTargets(p));
     const target = this.#getTarget(p);
 
-    if (this.#drawMode && this.#brush) this.#brush.onUpDown(e, this.#uctx);
-    else if (this.#isDown) {
+    if (this.#drawMode && this.#brush && !this.#isDown) {
+      const path = this.#brush.finishPath(
+        this.#makeCanvasBrushEvent(this.#uctx, p)
+      );
+
+      if (path) this.add(path);
+    } else if (this.#isDown) {
       if (this.#sel && this.#sel.isFinalized) {
         if ((target && !this.#sel.isMember(target)) || !this.#sel.contains(p))
           this.#unselect();
@@ -138,7 +163,7 @@ export class Canvas {
       const p = this.getCoords([e.x, e.y]);
 
       if (this.#drawMode && this.#brush) {
-        this.#brush.onMove(e, this.#uctx);
+        this.#brush.move(this.#makeCanvasBrushEvent(this.#uctx, p));
       } else {
         const s = this.getSelectedObjects();
 
@@ -177,7 +202,6 @@ export class Canvas {
     this.#applyOwnSize();
 
     this.#ucv.addEventListener("pointerdown", (e) => this.#onUpDown(e));
-    this.#ucv.addEventListener("pointerup", (e) => this.#onUpDown(e));
     document.addEventListener("pointerup", (e) => this.#onUpDown(e));
     this.#ucv.addEventListener("pointermove", (e) => this.#onMove(e));
   }
@@ -241,21 +265,16 @@ export class Canvas {
     this.#drawMode = this.#brush ? active ?? !this.#drawMode : false;
   }
 
-  setBrush(b?: Brush | null): void {
+  setBrush(b?: Brush): void {
     this.#brush = b ?? null;
-
-    if (this.#unsub) this.#unsub();
-
-    if (this.#brush)
-      this.#unsub = this.#brush.on("created", ({ path }) => this.add(path));
   }
 
-  on<K extends keyof SCanvasEventMap>(
-    eventName: K,
-    cb: Callback<SCanvasEventMap[K]>
-  ): Unsubscribe {
-    return this.#evs.on(eventName, cb);
-  }
+  // on<K extends keyof SCanvasEventMap>(
+  //   eventName: K,
+  //   cb: Callback<SCanvasEventMap[K]>
+  // ): Unsubscribe {
+  //   return this.#evs.on(eventName, cb);
+  // }
 
   renderLower(): void {
     this.#lctx.clearRect(0, 0, this.#w, this.#h);

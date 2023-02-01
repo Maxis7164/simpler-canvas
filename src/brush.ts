@@ -1,6 +1,6 @@
 import { SimplerEvent, SimplerEventMap } from "./events.js";
 import { Callback, Unsubscribe } from "./events";
-import { Canvas } from "./canvas.js";
+import type { CanvasBrushEvent } from "./canvas";
 import { Point } from "./point.js";
 import { Path } from "./path.js";
 
@@ -14,8 +14,14 @@ interface BrushOpts {
   width: number;
 }
 
+interface BrushMoveEvent {
+  points: Point[];
+  pointer: Point;
+}
 interface BrushEventMap extends Typed {
   created: { path: Path };
+  "before:move": BrushMoveEvent;
+  move: BrushMoveEvent;
 }
 
 export class Brush {
@@ -68,10 +74,10 @@ export class Brush {
     return path;
   }
 
-  #parent: Canvas;
-
   #evs: SimplerEventMap<BrushEventMap> = new SimplerEventMap({
     created: new SimplerEvent("created"),
+    "before:move": new SimplerEvent("before:move"),
+    move: new SimplerEvent("move"),
   });
 
   #str8end: boolean = false;
@@ -79,53 +85,47 @@ export class Brush {
   #points: Point[] = [];
   #to: number = -1;
 
-  #join: CanvasLineJoin = "miter";
-  #straightenAfter: number = 0;
-  #cap: CanvasLineCap = "butt";
-  #miter: number = 10.0;
-  #w: number = 1;
-
-  #createPath(): void {
+  #createPath(): Path | void {
     if (this.#points.length === 0) return;
 
     const inst = Brush.smoothenPath(this.#points);
+    const path = new Path(inst, { stroke: this.color, weight: this.width });
 
     this.#points = [];
-    this.#evs.fire("created", {
-      path: new Path(inst, { stroke: this.color, weight: this.#w }),
-    });
+    this.#evs.fire("created", { path });
+
+    return path;
   }
 
-  #straighten(ctx: CanvasRenderingContext2D): void {
+  #straighten({ ctx, render }: CanvasBrushEvent): void {
     const [p0, p1] = (this.#points = [
       this.#points[0],
       this.#points[this.#points.length - 1],
     ]);
 
-    ctx.clearRect(0, 0, this.#parent.width, this.#parent.height);
-    this.#parent.renderUpper();
+    render();
 
     ctx.beginPath();
-    ctx.moveTo(p0.x, p0.y);
-    ctx.lineTo(p1.x, p1.y);
+    p0.moveTo(ctx);
+    p1.lineTo(ctx);
     ctx.stroke();
 
-    this.#str8end = this.straight = true;
+    this.#str8end = this.#straight = true;
   }
 
-  #straightDraw(p: Point, ctx: CanvasRenderingContext2D): void {
+  #straightDraw({ ctx, pointer, render }: CanvasBrushEvent): void {
     if (this.#points.length === 0) {
-      this.#points[0] = p;
+      this.#points[0] = pointer;
       return;
-    } else this.#points[1] = p;
-    this.#parent.renderUpper();
+    } else this.#points[1] = pointer;
+    render();
 
     let [p0, p1] = this.#points;
     const tol: number = 5;
     // const a = p0.x - p1.x;
     // const b = p0.x - p1.x;
 
-    const rot = Brush.#getRotationAngle(p0, p);
+    const rot = Brush.#getRotationAngle(p0, pointer);
     if (Math.abs(rot) < tol + 90 && Math.abs(rot) > -tol + 90)
       p1 = this.#points[1] = new Point([p1.x, p0.y]);
     else if (Math.abs(rot) < tol && Math.abs(rot) > -tol)
@@ -146,79 +146,70 @@ export class Brush {
     ctx.lineTo(p1.x, p1.y);
     ctx.stroke();
   }
-  #freeDraw(p: Point, ctx: CanvasRenderingContext2D): void {
+  #freeDraw(e: CanvasBrushEvent): void {
     if (
       this.#points.length < 1 ||
-      !p.contains(this.#points[this.#points.length - 1], 5)
+      !e.pointer.contains(this.#points[this.#points.length - 1], 5)
     )
-      this.#points.push(p);
+      this.#points.push(e.pointer);
 
     const x = Brush.smoothenPath([...this.#points]);
 
-    ctx.beginPath();
-    Path.drawSvgPath(ctx, x, [0, 0]);
-    ctx.stroke();
+    e.ctx.beginPath();
+    Path.drawSvgPath(e.ctx, x, [0, 0]);
+    e.ctx.stroke();
 
-    if (this.#straightenAfter > 0)
-      this.#to = setTimeout(() => this.#straighten(ctx), this.#straightenAfter);
+    if (this.straightenAfter > 0)
+      this.#to = setTimeout(() => this.#straighten(e), this.straightenAfter);
   }
 
-  constructor(cv: Canvas, opts?: Partial<BrushOpts>) {
-    this.#parent = cv;
-
+  constructor(opts?: Partial<BrushOpts>) {
     if (opts) this.applyOpts(opts);
   }
 
-  straight: boolean = false;
+  lineJoin: CanvasLineJoin = "miter";
+  straightenAfter: number = 0;
+  lineCap: CanvasLineCap = "butt";
+  miter: number = 10.0;
+  width: number = 1;
+  #straight: boolean = false;
   color: string = "#000000";
 
-  onUpDown(e: PointerEvent, ctx: CanvasRenderingContext2D): void {
-    this.#draw = e.type === "pointerdown";
-
-    if (this.#draw) {
-      this.#points = [];
-
-      ctx.save();
-      ctx.beginPath();
-    } else {
-      clearTimeout(this.#to);
-      this.#to = -1;
-
-      if (this.#str8end) this.#str8end = this.straight = false;
-
-      this.#parent.renderUpper();
-      ctx.restore();
-      this.#parent.renderUpper();
-      this.#createPath();
-    }
-  }
-  onMove(e: PointerEvent, ctx: CanvasRenderingContext2D): void {
+  move(e: CanvasBrushEvent): void {
     clearTimeout(this.#to);
-    this.#to = -1;
 
-    if (this.#draw) {
-      const p = this.#parent.getCoords([e.x, e.y]);
-      ctx.strokeStyle = this.color;
+    e.ctx.strokeStyle = this.color;
+    e.ctx.lineJoin = this.lineJoin;
+    e.ctx.miterLimit = this.miter;
+    e.ctx.lineWidth = this.width;
+    e.ctx.lineCap = this.lineCap;
 
-      ctx.miterLimit = this.#miter;
-      ctx.lineJoin = this.#join;
+    this.#evs.fire("before:move", {
+      pointer: e.pointer,
+      points: [...this.#points],
+    });
 
-      ctx.lineWidth = this.#w;
-      ctx.lineCap = this.#cap;
+    if (this.#straight) this.#straightDraw(e);
+    else this.#freeDraw(e);
 
-      if (this.straight) this.#straightDraw(p, ctx);
-      else this.#freeDraw(p, ctx);
-    }
+    this.#evs.fire("move", {
+      pointer: e.pointer,
+      points: [...this.#points],
+    });
+  }
+
+  finishPath(e: CanvasBrushEvent): Path | void {
+    return this.#createPath();
   }
 
   applyOpts(opts: Partial<BrushOpts>): void {
-    if (opts.straightenAfter) this.#straightenAfter = opts.straightenAfter;
-    if (opts.miterLimit) this.#miter = opts.miterLimit;
-    if (opts.straight) this.straight = opts.straight;
-    if (opts.lineJoin) this.#join = opts.lineJoin;
-    if (opts.lineCap) this.#cap = opts.lineCap;
+    if (opts.straightenAfter) this.straightenAfter = opts.straightenAfter;
+    if (opts.miterLimit) this.miter = opts.miterLimit;
+    if (opts.straight) this.#straight = opts.straight;
+    if (opts.lineJoin) this.lineJoin = opts.lineJoin;
+    if (opts.lineCap) this.lineCap = opts.lineCap;
     if (opts.color) this.color = opts.color;
-    if (opts.width) this.#w = opts.width;
+    if (opts.width) this.width = opts.width;
   }
 
   on<K extends keyof BrushEventMap>(
@@ -226,40 +217,5 @@ export class Brush {
     cb: Callback<BrushEventMap[K]>
   ): Unsubscribe {
     return this.#evs.on(eventName, cb);
-  }
-
-  set width(w: number) {
-    this.#w = w > 0 ? w : this.#w;
-  }
-  get width(): number {
-    return this.#w;
-  }
-
-  set lineCap(l: CanvasLineCap) {
-    this.#cap = l;
-  }
-  get lineCap(): CanvasLineCap {
-    return this.#cap;
-  }
-
-  set lineJoin(j: CanvasLineJoin) {
-    this.#join = j;
-  }
-  get lineJoin(): CanvasLineJoin {
-    return this.#join;
-  }
-
-  set miterLimit(lim: number) {
-    this.#miter = lim;
-  }
-  get miterLimit(): number {
-    return this.#miter;
-  }
-
-  set straightenAfter(n: number) {
-    this.#straightenAfter = n;
-  }
-  get straightenAfter(): number {
-    return this.#straightenAfter;
   }
 }

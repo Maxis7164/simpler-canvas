@@ -114,6 +114,13 @@ export class Point {
     );
   }
 
+  moveTo(ctx: CanvasRenderingContext2D): void {
+    ctx.moveTo(this.#x, this.#y);
+  }
+  lineTo(ctx: CanvasRenderingContext2D): void {
+    ctx.lineTo(this.#x, this.#y);
+  }
+
   get x(): number {
     return this.#x;
   }
