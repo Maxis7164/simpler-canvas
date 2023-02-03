@@ -10,14 +10,14 @@ To get started, you first need to have a canvas element inside the documents bod
     <!-- any head-related tags; skipped -->
   </head>
   <body>
-    <canvas id="cv" />
+    <div id="cv-parent"></div>
   </body>
 </html>
 ```
 
 Important to mention is, that we gave the canvas something like an id or a class, so that we can differentiate between canvas', if you may need another one later on. Also, that id will come in handy next.
 
-Next, we have to import the `Canvas` class into our script and instantiate it, but how and with what arguments?
+Next, we have to tell the `Canvas` to use our div as parentbut how do we do that and with what arguments?
 
 The class first takes the parent element as an argument. This can either be the actual `HTMLElement` or, and here comes the id into play, you can input a string which ressembles a CSS Selector. The second argument is optional, so we will skip it for now.
 
@@ -28,5 +28,5 @@ So, our final code inside our script should look something like this:
 ```ts
 import { Canvas } from "simpler-canvas";
 
-const cv = new Canvas("canvas#cv", { background: "#aaaaaa" });
+const cv = new Canvas("div#cv-parent", { background: "#aaaaaa" });
 ```

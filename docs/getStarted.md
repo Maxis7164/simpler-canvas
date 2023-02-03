@@ -41,14 +41,14 @@ Testing if everything worked out could look like this:
   <!-- *Stripped* -->
 </head>
 <body>
-  <canvas id="cv" />
+  <div id="cv-parent"></div>
 </body>
 ```
 
 ```js
 import { Canvas } from "simpler-canvas";
 
-const cv = new Canvas("#cv", { background: "#2299bb" });
+const cv = new Canvas("div#cv-parent", { background: "#2299bb" });
 ```
 
 If there's a blue-tealish box, it has worked!
