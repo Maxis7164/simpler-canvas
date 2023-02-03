@@ -4,29 +4,31 @@
 class Brush {
   static smoothenPath(p: Point[], corr: number = 0): SVGInstruction[];
 
-  join: CanvasLineJoin = "miter";
+  lineJoin: CanvasLineJoin = "miter";
+  lineCap: CanvasLineCap = "butt";
   straightenAfter: number = 0;
-  cap: CanvasLineCap = "butt";
   straight: boolean = false;
   color: string = "#000000";
   miter: number = 10.0;
   width: number = 1;
 
-  constructor(cv: Canvas, opts?: Partial<BrushOpts>);
+  constructor(opts?: Partial<BrushOpts>);
 
   applyOpts(opts: Partial<BrushOpts>): void;
+
+  move(e: CanvasBrushEvent): void;
+  finishPath(): void;
 
   on<K extends keyof BrushEventMap>(
     eventName: K,
     callback: Callback<BrushEventMap[K]>
   ): Unsubscribe;
-
-  onUpDown(e: PointerEvent): void;
-  onMove(e: PointerEvent): void;
 }
 
 interface BrushEventMap extends Typed {
   created: { type: "created"; path: Path };
+  "before:move": { type: "before:moved"; points: Point[]; pointer: Point };
+  move: { type: "before:moved"; points: Point[]; pointer: Point };
 }
 ```
 
@@ -36,15 +38,15 @@ interface BrushEventMap extends Typed {
 
 The color of the brush.
 
-### join
+### lineJoin
 
 The mode that describes how individual lines should be joined together. Can be either 'bevel', 'round' or 'miter'.
 
-### cap
+### lineCap
 
 Describes the ends of individual lines. Can be either 'round', 'butt' or 'square'.
 
-### miterLimit
+### miter
 
 Determines how far the outside connection point can be placed from the inside connection point of a line _(See [here](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/miterLimit) or [here](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Applying_styles_and_colors#a_demo_of_the_miterlimit_property))_.
 
@@ -62,10 +64,6 @@ If greater than zero and if `straight = false`, it will straighten the points ar
 
 ## **Constructor**
 
-### cv
-
-The canvas the brush will draw on.
-
 ### opts
 
 Any optional settings for the brush.
@@ -74,20 +72,14 @@ Any optional settings for the brush.
 
 ### applyOpts
 
-Applies `BrushOpts` to the instance.
+Applies `BrushOpts` to the instance. This can be perfectly used, if many options have to be changed at once.
 
 ### on
 
-Listen to a specific event on `BrushEventMap`.
+Listen to a specific event on `BrushEventMap`. This is a passthrough of the `SimplerEventMap` instance of the `Brush` instance.
 
-### onUpDown
+### move
 
-A native event handler for `PointerUpEvent` and `PointerDownEvent`.
-
-This function is reserved for `Canvas`.
-
-### onMove
-
-A native event handler for `PointerMoveEvent`.
+Handles incoming moves provided by a `Canvas` parent, although any arbitrary input fulfilling the constrains of interface `CanvasBrushEvent` will work as well.
 
 This function is reserved for `Canvas`.

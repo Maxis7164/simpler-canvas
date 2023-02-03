@@ -80,8 +80,6 @@ export class Brush {
     move: new SimplerEvent("move"),
   });
 
-  #str8end: boolean = false;
-  #draw: boolean = false;
   #points: Point[] = [];
   #to: number = -1;
 
@@ -109,8 +107,6 @@ export class Brush {
     p0.moveTo(ctx);
     p1.lineTo(ctx);
     ctx.stroke();
-
-    this.#str8end = this.#straight = true;
   }
 
   #straightDraw({ ctx, pointer, render }: CanvasBrushEvent): void {
@@ -168,12 +164,12 @@ export class Brush {
   }
 
   lineJoin: CanvasLineJoin = "miter";
-  straightenAfter: number = 0;
   lineCap: CanvasLineCap = "butt";
+  straightenAfter: number = 0;
+  straight: boolean = false;
+  color: string = "#000000";
   miter: number = 10.0;
   width: number = 1;
-  #straight: boolean = false;
-  color: string = "#000000";
 
   move(e: CanvasBrushEvent): void {
     clearTimeout(this.#to);
@@ -189,7 +185,7 @@ export class Brush {
       points: [...this.#points],
     });
 
-    if (this.#straight) this.#straightDraw(e);
+    if (this.straight) this.#straightDraw(e);
     else this.#freeDraw(e);
 
     this.#evs.fire("move", {
@@ -205,7 +201,7 @@ export class Brush {
   applyOpts(opts: Partial<BrushOpts>): void {
     if (opts.straightenAfter) this.straightenAfter = opts.straightenAfter;
     if (opts.miterLimit) this.miter = opts.miterLimit;
-    if (opts.straight) this.#straight = opts.straight;
+    if (opts.straight) this.straight = opts.straight;
     if (opts.lineJoin) this.lineJoin = opts.lineJoin;
     if (opts.lineCap) this.lineCap = opts.lineCap;
     if (opts.color) this.color = opts.color;

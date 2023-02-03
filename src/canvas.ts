@@ -1,4 +1,4 @@
-import { Callback, SimplerEventMap, Unsubscribe } from "./events.js";
+import { SimplerEvent, SimplerEventMap } from "./events.js";
 import { Path, PathExport } from "./path.js";
 import { Selection } from "./selection.js";
 import { SObject } from "./sobject.js";
@@ -6,9 +6,15 @@ import { Layered } from "./layered.js";
 import { Brush } from "./brush.js";
 import { Point } from "./point.js";
 
-interface SCanvasEventMap extends Typed {}
+interface ContextMenuOpenEvent {
+  position: Point;
+}
+interface SCanvasEventMap extends Typed {
+  "ctx:open": ContextMenuOpenEvent;
+}
 
 interface CanvasOpts {
+  defaultContextMenu: boolean;
   drawModeActive: boolean;
   background: string;
   overlay: string;
@@ -26,9 +32,20 @@ export interface CanvasBrushEvent {
 export class Canvas {
   static #setup(
     parent: HTMLElement
-  ): [HTMLElement, HTMLCanvasElement, HTMLCanvasElement] {
+  ): [HTMLElement, HTMLCanvasElement, HTMLCanvasElement, HTMLElement] {
     const w = document.createElement("div");
     w.style.position = "relative";
+
+    const ctxm = document.createElement("div");
+    ctxm.setAttribute("__simpler_canvas:context_menu__", "");
+    ctxm.setAttribute("__smpc:ctx__", "");
+    ctxm.style.position = "absolute";
+
+    ctxm.style.background = "var(--smp-cnvs-ctx-bg, #ccc)";
+    ctxm.style.minHeight = "10px";
+    ctxm.style.display = "none";
+    ctxm.style.width = "175px";
+    ctxm.style.zIndex = "1";
 
     const l = document.createElement("canvas");
     l.style.position = "absolute";
@@ -38,14 +55,18 @@ export class Canvas {
 
     w.appendChild(l);
     w.appendChild(u);
+    w.appendChild(ctxm);
 
     parent.appendChild(w);
 
-    return [w, l, u];
+    return [w, l, u, ctxm];
   }
 
-  // #evs: SimplerEventMap<SCanvasEventMap> = new SimplerEventMap({});
+  #evs: SimplerEventMap<SCanvasEventMap> = new SimplerEventMap({
+    "ctx:open": new SimplerEvent("ctx:open"),
+  });
 
+  #ctxm: HTMLElement;
   #wr: HTMLElement;
   #lcv: HTMLCanvasElement;
   #ucv: HTMLCanvasElement;
@@ -53,7 +74,6 @@ export class Canvas {
   #lctx: CanvasRenderingContext2D;
   #uctx: CanvasRenderingContext2D;
 
-  // #unsub: Unsubscribe | null = null;
   #brush: Brush | null = null;
 
   #bg: string = "";
@@ -64,6 +84,7 @@ export class Canvas {
 
   #objs: Layered<SObject> = new Layered<SObject>();
 
+  #defaultContextMenu: boolean = false;
   #sel?: Selection | null = null;
   #drawMode: boolean = false;
   #isDown: boolean = false;
@@ -133,6 +154,12 @@ export class Canvas {
 
       if (path) this.add(path);
     } else if (this.#isDown) {
+      if (e.button !== 2) this.#ctxm.style.display = "none";
+      else {
+        this.#ctxm.replaceChildren();
+        this.#onCtxMenu(e);
+      }
+
       if (this.#sel && this.#sel.isFinalized) {
         if ((target && !this.#sel.isMember(target)) || !this.#sel.contains(p))
           this.#unselect();
@@ -159,6 +186,8 @@ export class Canvas {
     this.renderUpper();
   }
   #onMove(e: PointerEvent): void {
+    if (this.#ctxm.style.display === "block") return;
+
     if (this.#isDown) {
       const p = this.getCoords([e.x, e.y]);
 
@@ -182,6 +211,24 @@ export class Canvas {
       }
     }
   }
+  #onCtxMenu(e: PointerEvent): void {
+    const p = this.getCoords([e.x, e.y]);
+    const t = this.#getTarget(p);
+
+    if (t && this.#defaultContextMenu) {
+      this.#ctxm.style.display = "block";
+      this.#ctxm.style.left = `${p.x + 10}px`;
+      this.#ctxm.style.top = `${p.y + 10}px`;
+
+      const bDel = document.createElement("button");
+      bDel.innerText = "Remove from Canvas";
+      bDel.addEventListener("click", () => t.remove(this));
+
+      this.#ctxm.appendChild(bDel);
+    }
+
+    this.#evs.fire("ctx:open", { position: p });
+  }
 
   constructor(parent: HTMLElement | string, opts?: Partial<CanvasOpts>) {
     if (!(parent instanceof HTMLElement)) {
@@ -193,7 +240,7 @@ export class Canvas {
       else parent = x!;
     }
 
-    [this.#wr, this.#lcv, this.#ucv] = Canvas.#setup(parent);
+    [this.#wr, this.#lcv, this.#ucv, this.#ctxm] = Canvas.#setup(parent);
 
     this.#lctx = this.#lcv.getContext("2d")!;
     this.#uctx = this.#ucv.getContext("2d")!;
@@ -204,6 +251,7 @@ export class Canvas {
     this.#ucv.addEventListener("pointerdown", (e) => this.#onUpDown(e));
     document.addEventListener("pointerup", (e) => this.#onUpDown(e));
     this.#ucv.addEventListener("pointermove", (e) => this.#onMove(e));
+    this.#ucv.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
   getSelectedObjects(): SObject[] {
@@ -246,6 +294,9 @@ export class Canvas {
   applyOptions(opts: Partial<CanvasOpts>): void {
     if (opts.background) this.setBackground(opts.background);
     if (opts.overlay) this.setBackground(opts.overlay, true);
+
+    if (opts.defaultContextMenu)
+      this.#defaultContextMenu = opts.defaultContextMenu;
 
     if (opts.height || opts.width)
       this.setSize(opts.width ?? -1, opts.height ?? -1);
@@ -363,5 +414,8 @@ export class Canvas {
   }
   get width(): number {
     return this.#w;
+  }
+  get defaultContextMenu(): boolean {
+    return this.#defaultContextMenu;
   }
 }

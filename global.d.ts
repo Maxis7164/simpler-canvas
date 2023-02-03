@@ -1,6 +1,8 @@
 type Typed<T = any> = { [key: string]: T };
 type Boundings = [Point, Point, Point, Point];
 type Box = [number, number, number, number];
+
+/** @description Coordinates to a Point inside a canvas */
 type Coords = [number, number];
 
 type SVGInstructionType =

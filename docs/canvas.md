@@ -1,179 +1,32 @@
-# Canvas - 0.4.0-alpha
+# Using the Canvas
 
-```ts
-class Canvas {
-  get drawModeActive(): boolean;
-  get backgroundColor(): string;
-  get overlayColor(): string;
-  get height(): number;
-  get width(): number;
+The `Canvas` is the main thing of this library, so it's a good thing to know how it works.
 
-  constructor(parent: HTMLElement, opts?: Partial<CanvasOpts>);
+To get started, you first need to have a canvas element inside the documents body, e. g. like this:
 
-  getSelectedObjects(): SObject[];
-
-  backward(obj: SObject): void;
-  toBack(obj: SObject): void;
-  forward(obj: SObject): void;
-  toFront(obj: SObject): void;
-
-  add(...objs: SObject[]): void;
-  remove(...objs: SObject[]): void;
-
-  getCoords(p: Coords | Point): Point;
-
-  applyOptions(opts: Partial<CanvasOpts>): void;
-  setBackground(clrOrUrl: string, isOverlay?: boolean): void;
-  setSize(w: number, h: number): void;
-
-  setBrush(b?: Brush | null): void;
-
-  on<K extends keyof SCanvasEventMap>(
-    eventName: K,
-    cb: Callback<SCanvasEventMap[K]>
-  ): Unsubscribe;
-
-  renderLower(): void;
-  renderUpper(): void;
-  render(): void;
-
-  toObject(): CanvasExport;
-
-  loadFromJSON(json: string): void;
-  loadFromObject(ex: CanvasExport): void;
-
-  toJSON(): CanvasExport;
-}
+```html
+<html>
+  <head>
+    <!-- any head-related tags; skipped -->
+  </head>
+  <body>
+    <canvas id="cv" />
+  </body>
+</html>
 ```
 
-## **Properties**
+Important to mention is, that we gave the canvas something like an id or a class, so that we can differentiate between canvas', if you may need another one later on. Also, that id will come in handy next.
 
-### _get_ drawModeActive
+Next, we have to import the `Canvas` class into our script and instantiate it, but how and with what arguments?
 
-Describes the current draw mode state. If no `Brush` was set before, this value will always be false.
+The class first takes the parent element as an argument. This can either be the actual `HTMLElement` or, and here comes the id into play, you can input a string which ressembles a CSS Selector. The second argument is optional, so we will skip it for now.
 
-### _get_ backgroundColor
+Now, when you look at your website... nothing has changed... is what you may think, because the canvas' background color defaults to `#ffffff` (white), so it is indifferential for now. Changing the background color involves the second argument, which is an object of type `Partial<CanvasOpts>`.
 
-The background color of the canvas.
+So, our final code inside our script should look something like this:
 
-### _get_ overlayColor
+```ts
+import { Canvas } from "simpler-canvas";
 
-The color of the canvas' overlay.
-
-### _get_ height
-
-The height of the canvas.
-
-### _get_ width
-
-The width of the canvas.
-
-## **Constructor**
-
-### parent
-
-The parent `HTMLElement` the canvas should be appended to.
-
-### opts
-
-Any optional settings for the canvas e. g. the background color.
-
-## **Methods**
-
-### getSelectedObjects
-
-Returns an array of all currently selected objects of the canvas.
-
-### backward
-
-Sends an object of the canvas back a layer.
-
-This function will call `renderLower()` when it's done.
-
-### toBack
-
-Sends an object of the canvas to the back.
-
-This function will call `renderLower()` when it's done.
-
-### forward
-
-Sends an object of the canvas forward a layer.
-
-This function will call `renderLower()` when it's done.
-
-### toFront
-
-Sends an object of the canvas to the front.
-
-This function will call `renderLower()` when it's done.
-
-### add
-
-Adds the given objects to the canvas.
-
-This function will call `renderLower()` when it's done.
-
-### remove
-
-Removes the given objects from the canvas.
-
-This function will call `renderLower()` when it's done.
-
-### getCoords
-
-Converts page coordinates to canvas coordinates.
-
-### applyOptions
-
-Applys `CanvasOpts` to the canvas.
-
-### setBackground
-
-Sets the background or overlay of the canvas to an image or a color.
-
-### setSize
-
-Sets the size of the canvas.
-
-### setDrawMode
-
-Sets the draw mode of the canvas. If no `Brush` was set before, this will do nothing.
-
-### setBrush
-
-Links a `Brush` to the canvas.
-
-### on
-
-Allows you to listen to canvas events specified in `SCanvasEventMap`.
-
-### renderLower
-
-Renders all objects to the canvas. It will render the complete lower canvas.
-
-### renderUpper
-
-Renders selections, etc. to the upper canvas.
-
-### render
-
-Renders the canvas and applies its size and colors. This function combines `renderLower` and `renderUpper`.
-
-### toObject
-
-Exports the canvas as an object.
-
-### loadFromJSON
-
-Loads the canvas export object in JSON format.
-
-### loadFromObject
-
-Loads the canvas export object.
-
-### toJSON
-
-This function allows you to use the instance as an argument for the `JSON.stringify` function.
-
-This function is used by JSON.stringify.
+const cv = new Canvas("canvas#cv", { background: "#aaaaaa" });
+```
