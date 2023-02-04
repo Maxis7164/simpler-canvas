@@ -1,7 +1,7 @@
 import { SimplerEvent, SimplerEventMap } from "./events.js";
 import { Path, PathExport } from "./path.js";
 import { Selection } from "./selection.js";
-import { SObject } from "./sobject.js";
+// import { SObject } from "./sobject.js";
 import { Layered } from "./layered.js";
 import { Brush } from "./brush.js";
 import { Point } from "./point.js";
@@ -23,7 +23,7 @@ interface CanvasOpts {
 }
 export interface CanvasBrushEvent {
   ctx: CanvasRenderingContext2D;
-  target: SObject | null;
+  target: Path | null;
   pointer: Point;
   render: () => void;
   clear: () => void;
@@ -82,7 +82,7 @@ export class Canvas {
   #w: number = 600;
   #bx!: DOMRect;
 
-  #objs: Layered<SObject> = new Layered<SObject>();
+  #objs: Layered<Path> = new Layered<Path>();
 
   #defaultContextMenu: boolean = false;
   #sel?: Selection | null = null;
@@ -123,7 +123,7 @@ export class Canvas {
     this.#ucv.style.background = this.#ov;
   }
 
-  #hydrateObject(obj: SObjectExport): any {
+  #hydrateObject(obj: PathExport): any {
     switch (obj.type) {
       case "path":
         return Path.hydrate(obj as PathExport);
@@ -134,10 +134,10 @@ export class Canvas {
     this.#objs.forEach((obj) => obj.setSelected(false));
     this.#sel = null;
   }
-  #getTargets(pos: Coords | Point): SObject[] {
+  #getTargets(pos: Coords | Point): Path[] {
     return this.#objs.filter((obj) => obj.contains(pos));
   }
-  #getTarget(pos: Coords | Point): SObject | null {
+  #getTarget(pos: Coords | Point): Path | null {
     return this.#objs.find((obj) => obj.contains(pos)) ?? null;
   }
 
@@ -254,31 +254,31 @@ export class Canvas {
     this.#ucv.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  getSelectedObjects(): SObject[] {
+  getSelectedObjects(): Path[] {
     return this.#objs.filter((obj) => obj.selected);
   }
-  backward(obj: SObject): void {
+  backward(obj: Path): void {
     this.#objs.toRelativePosition(obj, -1);
     this.renderLower();
   }
-  toBack(obj: SObject): void {
+  toBack(obj: Path): void {
     this.#objs.toStart(obj);
     this.renderLower();
   }
-  forward(obj: SObject): void {
+  forward(obj: Path): void {
     this.#objs.toRelativePosition(obj, 1);
     this.renderLower();
   }
-  toFront(obj: SObject): void {
+  toFront(obj: Path): void {
     this.#objs.toEnd(obj);
     this.renderLower();
   }
 
-  add(...objs: SObject[]): void {
+  add(...objs: Path[]): void {
     this.#objs.set([...this.#objs, ...objs]);
     this.renderLower();
   }
-  remove(...objs: SObject[]): void {
+  remove(...objs: Path[]): void {
     this.#objs.set(this.#objs.filter((obj) => !objs.includes(obj)));
     this.renderLower();
   }

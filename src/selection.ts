@@ -1,10 +1,11 @@
-import { SObject } from "./sobject.js";
+// import { SObject } from "./sobject.js";
 import { Point } from "./point.js";
+import { Path } from "./path.js";
 
 export class Selection {
   static color: string = "#22ffbb";
 
-  #member: SObject[] = [];
+  #member: Path[] = [];
   #finalized: boolean = false;
 
   #s: Point;
@@ -44,7 +45,7 @@ export class Selection {
     this.#calcBox();
   }
 
-  finalize(...memb: SObject[]): void {
+  finalize(...memb: Path[]): void {
     if (this.#finalized) return;
 
     this.#member.push(...memb);
@@ -64,7 +65,7 @@ export class Selection {
     this.#calcBox();
   }
 
-  isMember(obj: SObject): boolean {
+  isMember(obj: Path): boolean {
     return this.#member.includes(obj);
   }
   contains(p: Point | Coords): boolean {
@@ -101,7 +102,7 @@ export class Selection {
     ctx.restore();
   }
 
-  get members(): SObject[] {
+  get members(): Path[] {
     return [...this.#member];
   }
   get box(): Box | null {

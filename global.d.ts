@@ -29,19 +29,6 @@ interface CanvasExport {
   width: number;
 }
 
-interface SObjectOpts {
-  selectable: boolean;
-  stroke: string;
-  weight: number;
-  fill: string;
-}
-
-interface SObjectExport extends SObjectOpts {
-  type: string;
-  x: number;
-  y: number;
-}
-
 type Matrix2x3 = [number, number, number, number, number, number];
 type Dimension = [number, number];
 
