@@ -21,15 +21,9 @@ export class Path {
     InvalidPointReceived:
       "Invalid Point Received: Received an invalid point from a trusted source.",
   };
-
-  static #applyInverseOnPoint(m: Matrix, p: Point | Coords): Point {
-    if (p instanceof Point) p = p.coords;
-
-    const v = new Matrix([[p[0]], [p[1]], [0]]);
-
-    const i = m.getInverse();
-    return new Point(i.multiplyWith(v));
-  }
+  static readonly buttons: Typed<number> = {
+    rotate: 0,
+  };
 
   static #getMidOfQuadratic(
     b: Coords | Point,
@@ -43,7 +37,6 @@ export class Path {
 
     return bc.lerp(ce, 0.5);
   }
-
   static #getExtremesOfCubic(
     sta: Point | Coords,
     ctrl1: Point | Coords,
@@ -190,6 +183,8 @@ export class Path {
   #selected: boolean = false;
 
   #m: Matrix = Matrix.getIdentity(3);
+  #mi: Matrix = this.#m.invert();
+  #angle: number = 0;
   #x: number = -1;
   #y: number = -1;
   #w: number = -1;
@@ -197,6 +192,21 @@ export class Path {
 
   #scaleX: number = 1;
   #scaleY: number = 1;
+
+  #applyInverseOnPoint(p: Point | Coords): Point {
+    if (p instanceof Point) p = p.coords;
+
+    const v = new Matrix([[p[0]], [p[1]], [0]]);
+
+    return new Point(this.#mi.multiplyWith(v));
+  }
+  #applyMatrixOnPoint(p: Point | Coords): Point {
+    if (p instanceof Point) p = p.coords;
+
+    const v = new Matrix([[p[0]], [p[1]], [0]]);
+
+    return new Point(this.#m.multiplyWith(v));
+  }
 
   #calcOwnBox(): void {
     let low: Coords = [this.#p[0][1], this.#p[0][2]];
@@ -259,7 +269,7 @@ export class Path {
       )
     ) as SVGInstruction[];
 
-    this.setBox(box);
+    [this.#x, this.#y, this.#w, this.#h] = box;
   }
 
   constructor(path: SVGInstruction[] | string, opts?: Partial<PathOpts>) {
@@ -282,19 +292,12 @@ export class Path {
     if (opts.fill) this.fill = opts.fill;
   }
 
-  setBox(b: Box) {
-    [this.#x, this.#y, this.#w, this.#h] = b;
-  }
   move(dx: number, dy: number): void {
-    [dx, dy] = Path.#applyInverseOnPoint(this.#m, [dx, dy]).coords;
-
     this.#x += dx;
     this.#y += dy;
   }
   setPosition(p: Coords | Point): void {
-    if (p instanceof Point) p = p.coords;
-
-    [this.#x, this.#y] = p;
+    [this.#x, this.#y] = this.#applyInverseOnPoint(p).coords;
   }
 
   scale(v?: number, h?: number): void {
@@ -309,6 +312,13 @@ export class Path {
 
     this.#m = this.#m.scale(v, h);
   }
+  rotate(phi: number): void {
+    const r = phi - this.#angle; //? get actual angle
+    this.#angle = phi;
+
+    this.#m = this.#m.rotate(r);
+    this.#mi = this.#m.invert();
+  }
 
   setSelected(isSelected?: boolean): void {
     if (this.selectable) this.#selected = isSelected ?? !this.#selected;
@@ -316,11 +326,13 @@ export class Path {
 
   contains(p: Point | Coords): boolean {
     [p] = Point.convert(true, p);
-    p = Path.#applyInverseOnPoint(this.#m, p.coords);
+
+    p = this.#applyInverseOnPoint(p.coords);
+    const t = this.#applyInverseOnPoint([this.#x, this.#y]);
 
     return (
-      p.gt([this.#x - 0.5 * this.weight, this.#y - 0.5 * this.weight]) &&
-      p.lt([this.#x + this.#w + this.weight, this.#y + this.#h + this.weight])
+      p.gt([t.x - 0.5 * this.weight, t.y - 0.5 * this.weight]) &&
+      p.lt([t.x + this.#w + this.weight, t.y + this.#h + this.weight])
     );
   }
   containedIn(box: Box): boolean {
@@ -342,25 +354,27 @@ export class Path {
     ctx.lineWidth = this.weight;
     ctx.fillStyle = this.fill;
 
-    Path.drawSvgPath(ctx, this.#p, this.coords);
+    const p = this.#applyInverseOnPoint([this.#x, this.#y]);
+    Path.drawSvgPath(ctx, this.#p, p.coords);
 
     if (this.stroke) ctx.stroke();
     if (this.fill) ctx.fill();
 
-    //? debug
-    // ctx.strokeStyle = "#bf4566";
-    // ctx.strokeRect(...this.box);
+    //?: debug
+    // ctx.strokeStyle = "#bf4566"; //? size used as point to easily apply matrix inverse
+    // ctx.strokeRect(p.x, p.y, this.#w, this.#h);
 
     ctx.restore();
   }
-
   renderBox(ctx: CanvasRenderingContext2D, clr: string): void {
     ctx.save();
     ctx.beginPath();
     ctx.transform(...this.#m.toCtxInterp());
 
+    const p = this.#applyInverseOnPoint([this.#x, this.#y]);
+
     ctx.strokeStyle = clr;
-    ctx.strokeRect(...this.box);
+    ctx.strokeRect(p.x, p.y, this.#w, this.#h);
 
     ctx.restore();
   }
@@ -400,11 +414,14 @@ export class Path {
   get height(): number {
     return this.#h;
   }
-
-  //! probably get abandoned or changed...
   get coords(): Coords {
     return [this.#x, this.#y];
   }
+  get buttons(): Coords[] {
+    return [[this.#x + this.#w / 2, this.#y - 10]];
+  }
+
+  //! probably get abandoned or changed...
   get box(): Box {
     return [
       this.#x - 0.5 * this.weight,

@@ -25,8 +25,38 @@ export class Matrix {
     return sl ? [m.length, l[0]] : [-1, -1];
   }
 
-  static #degreesToRadians(d: number): number {
+  static #roundTo(x: number, decimalPlaces: number): number {
+    return Math.floor(x * 10 ** decimalPlaces) / 10 ** decimalPlaces;
+  }
+
+  static degreesToRadians(d: number): number {
     return (Math.PI * d) / 180;
+  }
+
+  /** @param phi Angle of the mirroring line in radians */
+  static getMirrorMatrix(phi: number): Matrix {
+    const sin = this.#roundTo(Math.sin(2 * phi), 3);
+    const cos = this.#roundTo(Math.cos(2 * phi), 3);
+
+    return new Matrix([
+      [cos, sin, 0],
+      [sin, -cos, 0],
+      [0, 0, 1],
+    ]);
+  }
+  /** @param phi Rotation angle in radians */
+  static getRotationMatrix(phi: number): Matrix {
+    const sin = this.#roundTo(Math.sin(phi), 3);
+    const cos = this.#roundTo(Math.cos(phi), 3);
+
+    const sin0 = Math.abs(sin) <= 0.001;
+    const cos0 = Math.abs(cos) <= 0.001;
+
+    return new Matrix([
+      [cos0 ? 0 : cos, sin0 ? 0 : -sin, 0],
+      [sin0 ? 0 : sin, cos0 ? 0 : cos, 0],
+      [0, 0, 1],
+    ]);
   }
 
   /** @param { number } n The number of rows and columns of the identity matrix */
@@ -114,7 +144,7 @@ export class Matrix {
     return new Matrix(nxt);
   }
 
-  getInverse(): Matrix {
+  invert(): Matrix {
     return new Matrix(matrixInverse(this.#m));
   }
 
@@ -126,17 +156,9 @@ export class Matrix {
 
     return new Matrix([...r]);
   }
-  rotate(angle: number): Matrix {
-    const og = [...this.#m];
-
-    const r = Matrix.#degreesToRadians(angle);
-
-    og[0][0] = og[0][0] * Math.cos(r);
-    og[0][1] = og[0][1] * -Math.sin(r);
-    og[1][0] = og[1][0] * Math.sin(r);
-    og[1][1] = og[1][1] * Math.cos(r);
-
-    return new Matrix([...og]);
+  /** @param r Rotation angle in radians */
+  rotate(r: number): Matrix {
+    return this.multiplyWith(Matrix.getRotationMatrix(r));
   }
 
   toArray(): number[][] {
