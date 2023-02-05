@@ -1,7 +1,6 @@
 import { SimplerEvent, SimplerEventMap } from "./events.js";
 import { Path, PathExport } from "./path.js";
 import { Selection } from "./selection.js";
-// import { SObject } from "./sobject.js";
 import { Layered } from "./layered.js";
 import { Brush } from "./brush.js";
 import { Point } from "./point.js";
@@ -141,46 +140,52 @@ export class Canvas {
     return this.#objs.find((obj) => obj.contains(pos)) ?? null;
   }
 
-  #onUpDown(e: PointerEvent): void {
-    this.#isDown = e.type === "pointerdown";
+  #handleDown(e: PointerEvent): void {
+    if (this.#drawMode) return;
+
     const p = this.getCoords([e.x, e.y]);
     const t = new Layered(...this.#getTargets(p));
     const target = this.#getTarget(p);
 
+    if (e.button !== 2) this.#ctxm.style.display = "none";
+    else {
+      this.#ctxm.replaceChildren();
+      this.#onCtxMenu(e);
+    }
+
+    if (this.#sel && this.#sel.isFinalized) {
+      if ((target && !this.#sel.isMember(target)) || !this.#sel.contains(p))
+        this.#unselect();
+    } else if (this.getSelectedObjects().length === 0 || !e.ctrlKey) {
+      this.#unselect();
+
+      if (t.length > 0) t[t.lastIndex].setSelected(true);
+      else this.#sel = new Selection(p);
+    }
+  }
+  #handleUp(): void {
+    if (this.#sel) {
+      const box = this.#sel?.box!;
+
+      if (box) {
+        this.#objs.forEach((obj) => obj.setSelected(obj.containedIn(box)));
+        this.#sel.finalize(...this.getSelectedObjects());
+
+        if (this.#sel.box && this.#sel.box[2] === 0 && this.#sel.box[3] === 0)
+          this.#sel = null;
+      }
+    }
+  }
+  #onUpDown(e: PointerEvent): void {
+    this.#isDown = e.type === "pointerdown";
+
     if (this.#drawMode && this.#brush && !this.#isDown) {
-      const path = this.#brush.finishPath(
-        this.#makeCanvasBrushEvent(this.#uctx, p)
-      );
+      const path = this.#brush.finishPath();
 
       if (path) this.add(path);
-    } else if (this.#isDown) {
-      if (e.button !== 2) this.#ctxm.style.display = "none";
-      else {
-        this.#ctxm.replaceChildren();
-        this.#onCtxMenu(e);
-      }
-
-      if (this.#sel && this.#sel.isFinalized) {
-        if ((target && !this.#sel.isMember(target)) || !this.#sel.contains(p))
-          this.#unselect();
-      } else if (this.getSelectedObjects().length === 0 || !e.ctrlKey) {
-        this.#unselect();
-
-        if (t.length > 0) t[t.lastIndex].setSelected(true);
-        else this.#sel = new Selection(p);
-      }
     } else {
-      if (this.#sel) {
-        const box = this.#sel?.box!;
-
-        if (box) {
-          this.#objs.forEach((obj) => obj.setSelected(obj.containedIn(box)));
-          this.#sel.finalize(...this.getSelectedObjects());
-
-          if (this.#sel.box && this.#sel.box[2] === 0 && this.#sel.box[3] === 0)
-            this.#sel = null;
-        }
-      }
+      if (this.#isDown) this.#handleDown(e);
+      else this.#handleUp();
     }
 
     this.renderUpper();
