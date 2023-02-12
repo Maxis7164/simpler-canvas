@@ -1,6 +1,8 @@
+import { Box } from "./box.js";
 import type { Canvas } from "./canvas.js";
 import { Matrix } from "./matrix.js";
 import { Point } from "./point.js";
+import { SObject } from "./sobject.js";
 
 export interface PathExport extends PathOpts {
   path: string;
@@ -16,7 +18,7 @@ interface PathOpts {
   fill: string;
 }
 
-export class Path {
+export class Path extends SObject<PathExport> {
   static readonly errors = {
     InvalidPointReceived:
       "Invalid Point Received: Received an invalid point from a trusted source.",
@@ -24,6 +26,22 @@ export class Path {
   static readonly buttons: Typed<number> = {
     rotate: 0,
   };
+
+  static rect(
+    coords: Point | Coords,
+    w: number,
+    h: number,
+    opts?: Partial<PathOpts>
+  ): Path {
+    const [p] = Point.convert(false, coords);
+
+    return new Path(
+      `M ${p[0]} ${p[1]} L ${p[0] + w} ${p[1]} L ${p[0] + w} ${p[1] + h} L ${
+        p[0]
+      } ${p[1] + h} z`,
+      opts
+    );
+  }
 
   static #getMidOfQuadratic(
     b: Coords | Point,
@@ -208,7 +226,7 @@ export class Path {
     return new Point(this.#m.multiplyWith(v));
   }
 
-  #calcOwnBox(): void {
+  #calcOwnBox(): Box {
     let low: Coords = [this.#p[0][1], this.#p[0][2]];
     let high: Coords = [this.#p[0][1], this.#p[0][2]];
     let last: Coords = [0, 0];
@@ -261,21 +279,32 @@ export class Path {
       }
     });
 
-    const box: Box = [low[0], low[1], high[0] - low[0], high[1] - low[1]];
+    const box: Box = new Box(
+      low[0],
+      low[1],
+      high[0] - low[0],
+      high[1] - low[1]
+    );
 
     this.#p = this.#p.map((inst) =>
       inst.map((part, i) =>
-        typeof part === "string" ? part : i % 2 ? part - box[0] : part - box[1]
+        typeof part === "string"
+          ? part
+          : i % 2
+          ? part - box.position.x
+          : part - box.position.y
       )
     ) as SVGInstruction[];
 
-    [this.#x, this.#y, this.#w, this.#h] = box;
+    return box;
   }
 
   constructor(path: SVGInstruction[] | string, opts?: Partial<PathOpts>) {
+    super([0, 0], [0, 0]);
+
     this.#p = typeof path === "string" ? Path.#parseSVGPath(path) : path;
 
-    this.#calcOwnBox();
+    this.setBox(this.#calcOwnBox());
 
     if (opts) this.applyOpts(opts);
   }
@@ -290,14 +319,6 @@ export class Path {
     if (opts.stroke) this.stroke = opts.stroke;
     if (opts.weight) this.weight = opts.weight;
     if (opts.fill) this.fill = opts.fill;
-  }
-
-  move(dx: number, dy: number): void {
-    this.#x += dx;
-    this.#y += dy;
-  }
-  setPosition(p: Coords | Point): void {
-    [this.#x, this.#y] = this.#applyInverseOnPoint(p).coords;
   }
 
   scale(v?: number, h?: number): void {
@@ -320,29 +341,25 @@ export class Path {
     this.#mi = this.#m.invert();
   }
 
-  setSelected(isSelected?: boolean): void {
-    if (this.selectable) this.#selected = isSelected ?? !this.#selected;
-  }
+  // contains(p: Point | Coords): boolean {
+  //   [p] = Point.convert(true, p);
 
-  contains(p: Point | Coords): boolean {
-    [p] = Point.convert(true, p);
+  //   p = this.#applyInverseOnPoint(p.coords);
+  //   const t = this.#applyInverseOnPoint([this.#x, this.#y]);
 
-    p = this.#applyInverseOnPoint(p.coords);
-    const t = this.#applyInverseOnPoint([this.#x, this.#y]);
-
-    return (
-      p.gt([t.x - 0.5 * this.weight, t.y - 0.5 * this.weight]) &&
-      p.lt([t.x + this.#w + this.weight, t.y + this.#h + this.weight])
-    );
-  }
-  containedIn(box: Box): boolean {
-    return (
-      this.#x - 0.5 * this.weight > box[0] &&
-      this.#x + this.#w + this.weight < box[0] + box[2] &&
-      this.#y + 0.5 * this.weight > box[1] &&
-      this.#y + this.#h + this.weight < box[1] + box[3]
-    );
-  }
+  //   return (
+  //     p.gt([t.x - 0.5 * this.weight, t.y - 0.5 * this.weight]) &&
+  //     p.lt([t.x + this.#w + this.weight, t.y + this.#h + this.weight])
+  //   );
+  // }
+  // containedIn(box: Box): boolean {
+  //   return (
+  //     this.#x - 0.5 * this.weight > box.x &&
+  //     this.#x + this.#w + this.weight < box.x + box.w &&
+  //     this.#y + 0.5 * this.weight > box.y &&
+  //     this.#y + this.#h + this.weight < box.y + box.h
+  //   );
+  // }
 
   render(ctx: CanvasRenderingContext2D): void {
     ctx.save();
@@ -354,7 +371,7 @@ export class Path {
     ctx.lineWidth = this.weight;
     ctx.fillStyle = this.fill;
 
-    const p = this.#applyInverseOnPoint([this.#x, this.#y]);
+    const p = this.#applyInverseOnPoint(this.position);
     Path.drawSvgPath(ctx, this.#p, p.coords);
 
     if (this.stroke) ctx.stroke();
@@ -366,22 +383,18 @@ export class Path {
 
     ctx.restore();
   }
-  renderBox(ctx: CanvasRenderingContext2D, clr: string): void {
-    ctx.save();
-    ctx.beginPath();
-    ctx.transform(...this.#m.toCtxInterp());
+  // renderBox(ctx: CanvasRenderingContext2D, clr: string): void {
+  //   ctx.save();
+  //   ctx.beginPath();
+  //   ctx.transform(...this.#m.toCtxInterp());
 
-    const p = this.#applyInverseOnPoint([this.#x, this.#y]);
+  //   const p = this.#applyInverseOnPoint([this.#x, this.#y]);
 
-    ctx.strokeStyle = clr;
-    ctx.strokeRect(p.x, p.y, this.#w, this.#h);
+  //   ctx.strokeStyle = clr;
+  //   ctx.strokeRect(p.x, p.y, this.#w, this.#h);
 
-    ctx.restore();
-  }
-
-  remove(from: Canvas): void {
-    from.remove(this);
-  }
+  //   ctx.restore();
+  // }
 
   toObject(): PathExport {
     return {
@@ -423,12 +436,12 @@ export class Path {
 
   //! probably get abandoned or changed...
   get box(): Box {
-    return [
+    return new Box(
       this.#x - 0.5 * this.weight,
       this.#y - 0.5 * this.weight,
       this.#w + this.weight,
-      this.#h + this.weight,
-    ];
+      this.#h + this.weight
+    );
   }
   get boundings(): Boundings {
     return [

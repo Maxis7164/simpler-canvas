@@ -1,6 +1,6 @@
 type Typed<T = any> = { [key: string]: T };
+type BoxArr = [number, number, number, number];
 type Boundings = [Point, Point, Point, Point];
-type Box = [number, number, number, number];
 
 /** @description Coordinates to a Point inside a canvas */
 type Coords = [number, number];

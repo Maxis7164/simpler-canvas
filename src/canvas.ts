@@ -1,7 +1,8 @@
 import { SimplerEvent, SimplerEventMap } from "./events.js";
 import { Path, PathExport } from "./path.js";
-import { Selection } from "./selection.js";
 import { Layered } from "./layered.js";
+import { SObject } from "./sobject.js";
+import { Sel } from "./selection.js";
 import { Brush } from "./brush.js";
 import { Point } from "./point.js";
 
@@ -22,7 +23,7 @@ interface CanvasOpts {
 }
 export interface CanvasBrushEvent {
   ctx: CanvasRenderingContext2D;
-  target: Path | null;
+  target: SObject | null;
   pointer: Point;
   render: () => void;
   clear: () => void;
@@ -81,12 +82,12 @@ export class Canvas {
   #w: number = 600;
   #bx!: DOMRect;
 
-  #objs: Layered<Path> = new Layered<Path>();
+  #objs: Layered<SObject> = new Layered<SObject>();
 
   #defaultContextMenu: boolean = false;
-  #sel?: Selection | null = null;
   #drawMode: boolean = false;
   #isDown: boolean = false;
+  #sel: Sel = new Sel();
 
   #makeCanvasBrushEvent(
     ctx: CanvasRenderingContext2D,
@@ -130,13 +131,11 @@ export class Canvas {
   }
 
   #unselect(): void {
-    this.#objs.forEach((obj) => obj.setSelected(false));
-    this.#sel = null;
+    this.#objs.forEach((obj) => (obj.isSelected = false));
+    this.#sel.clear();
+    this.renderUpper();
   }
-  #getTargets(pos: Coords | Point): Path[] {
-    return this.#objs.filter((obj) => obj.contains(pos));
-  }
-  #getTarget(pos: Coords | Point): Path | null {
+  #getTarget(pos: Coords | Point): SObject | null {
     return this.#objs.find((obj) => obj.contains(pos)) ?? null;
   }
 
@@ -144,7 +143,6 @@ export class Canvas {
     if (this.#drawMode) return;
 
     const p = this.getCoords([e.x, e.y]);
-    const t = new Layered(...this.#getTargets(p));
     const target = this.#getTarget(p);
 
     if (e.button !== 2) this.#ctxm.style.display = "none";
@@ -153,27 +151,23 @@ export class Canvas {
       this.#onCtxMenu(e);
     }
 
-    if (this.#sel && this.#sel.isFinalized) {
-      if ((target && !this.#sel.isMember(target)) || !this.#sel.contains(p))
-        this.#unselect();
-    } else if (this.getSelectedObjects().length === 0 || !e.ctrlKey) {
+    //#region selection
+    if (target && !target.isSelected) {
+      target.isSelected = true;
+      this.renderUpper();
+    } else if (!target) {
       this.#unselect();
-
-      if (t.length > 0) t[t.lastIndex].setSelected(true);
-      else this.#sel = new Selection(p);
+      this.#sel.setPoint(p);
     }
+    //#endregion
   }
   #handleUp(): void {
-    if (this.#sel) {
-      const box = this.#sel?.box!;
-
-      if (box) {
-        this.#objs.forEach((obj) => obj.setSelected(obj.containedIn(box)));
-        this.#sel.finalize(...this.getSelectedObjects());
-
-        if (this.#sel.box && this.#sel.box[2] === 0 && this.#sel.box[3] === 0)
-          this.#sel = null;
-      }
+    if (this.#sel.isComplete) {
+      this.#objs.forEach(
+        (obj) => (obj.isSelected = obj.containedIn(this.#sel.box))
+      );
+      this.renderUpper();
+      this.#sel.clear();
     }
   }
   #onUpDown(e: PointerEvent): void {
@@ -187,8 +181,6 @@ export class Canvas {
       if (this.#isDown) this.#handleDown(e);
       else this.#handleUp();
     }
-
-    this.renderUpper();
   }
   #onMove(e: PointerEvent): void {
     if (this.#ctxm.style.display === "block") return;
@@ -201,17 +193,13 @@ export class Canvas {
       } else {
         const s = this.getSelectedObjects();
 
-        if (this.#sel) {
-          if (this.#sel.isFinalized) {
-            this.#sel.move(e.movementX, e.movementY);
-            this.render();
-          } else {
-            this.#sel.setEnd(p);
-            this.renderUpper();
-          }
-        } else if (s.length > 0) {
-          s.forEach((obj) => obj.move(e.movementX, e.movementY));
+        if (s.length > 0) {
+          s.forEach((obj) => obj.move([e.movementX, e.movementY]));
           this.render();
+        } else if (this.#sel.isComplete) {
+          this.#sel.setPoint(p);
+          this.renderUpper();
+          this.#sel.render(this.#uctx);
         }
       }
     }
@@ -259,31 +247,31 @@ export class Canvas {
     this.#ucv.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  getSelectedObjects(): Path[] {
-    return this.#objs.filter((obj) => obj.selected);
+  getSelectedObjects(): SObject[] {
+    return this.#objs.filter((obj) => obj.isSelected);
   }
-  backward(obj: Path): void {
+  backward(obj: SObject): void {
     this.#objs.toRelativePosition(obj, -1);
     this.renderLower();
   }
-  toBack(obj: Path): void {
+  toBack(obj: SObject): void {
     this.#objs.toStart(obj);
     this.renderLower();
   }
-  forward(obj: Path): void {
+  forward(obj: SObject): void {
     this.#objs.toRelativePosition(obj, 1);
     this.renderLower();
   }
-  toFront(obj: Path): void {
+  toFront(obj: SObject): void {
     this.#objs.toEnd(obj);
     this.renderLower();
   }
 
-  add(...objs: Path[]): void {
+  add(...objs: SObject[]): void {
     this.#objs.set([...this.#objs, ...objs]);
     this.renderLower();
   }
-  remove(...objs: Path[]): void {
+  remove(...objs: SObject[]): void {
     this.#objs.set(this.#objs.filter((obj) => !objs.includes(obj)));
     this.renderLower();
   }
@@ -340,13 +328,8 @@ export class Canvas {
   renderUpper(): void {
     this.#uctx.clearRect(0, 0, this.#w, this.#h);
 
-    if (this.#sel) {
-      if (this.#sel.isFinalized) this.#sel.render(this.#uctx);
-      else this.#sel.render(this.#uctx);
-    }
-
     this.#objs.forEach((obj) =>
-      obj.selected ? obj.renderBox(this.#uctx, Selection.color) : null
+      obj.isSelected ? obj.renderBox(this.#uctx, Sel.color) : null
     );
   }
   render(): void {
@@ -392,18 +375,18 @@ export class Canvas {
     this.add(...nxt);
   }
 
-  attachSelection(sel: Selection): void {
-    const box = sel.box!;
+  // attachSelection(sel: Selection): void {
+  //   const box = sel.box!;
 
-    if (box) {
-      this.#objs.forEach((obj) => obj.setSelected(obj.containedIn(box)));
-      sel.finalize(...this.getSelectedObjects());
+  //   if (box) {
+  //     this.#objs.forEach((obj) => (obj.isSelected = obj.containedIn(box)));
+  //     sel.finalize(...this.getSelectedObjects());
 
-      if (sel.box && sel.box[2] !== 0 && sel.box[3] !== 0) this.#sel = sel;
-    }
+  //     if (sel.box && sel.box.w !== 0 && sel.box.h !== 0) this.#selOLD = sel;
+  //   }
 
-    this.renderUpper();
-  }
+  //   this.renderUpper();
+  // }
 
   get drawModeActive(): boolean {
     return this.#drawMode;

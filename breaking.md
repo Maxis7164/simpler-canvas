@@ -1,5 +1,9 @@
 # Breaking Changes
 
+## Commit _`newest`_
+
+- Added `SObject` as abstract class
+
 ## Commit `51d06d2`
 
 - `Matrix.prototype.rotate` will now use radians as angle input instead of degrees

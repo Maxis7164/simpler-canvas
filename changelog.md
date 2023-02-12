@@ -4,4 +4,8 @@ This changelog contains changes between versions, with their corresponding commi
 
 > _This log does not contain any changes before version 0.5.0a_
 
+## version 0.6.0a
+
+- aadded `Path.rect()`
+
 ## version 0.5.0a
