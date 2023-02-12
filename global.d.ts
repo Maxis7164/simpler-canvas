@@ -1,4 +1,5 @@
 type Typed<T = any> = { [key: string]: T };
+type Empty<T extends Array> = T | [];
 type BoxArr = [number, number, number, number];
 type Boundings = [Point, Point, Point, Point];
 

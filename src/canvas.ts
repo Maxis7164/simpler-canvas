@@ -16,6 +16,7 @@ interface SCanvasEventMap extends Typed {
 interface CanvasOpts {
   defaultContextMenu: boolean;
   drawModeActive: boolean;
+  containInside: boolean;
   background: string;
   overlay: string;
   height: number;
@@ -100,6 +101,9 @@ export class Canvas {
       render: () => this.renderUpper(),
       clear: () => null,
     };
+  }
+  #getBoxArr(): BoxArr {
+    return [0, 0, this.#w, this.#h];
   }
 
   #applyOwnSize(): void {
@@ -194,7 +198,12 @@ export class Canvas {
         const s = this.getSelectedObjects();
 
         if (s.length > 0) {
-          s.forEach((obj) => obj.move([e.movementX, e.movementY]));
+          s.forEach((obj) =>
+            obj.move(
+              [e.movementX, e.movementY],
+              this.containInside ? this.#getBoxArr() : []
+            )
+          );
           this.render();
         } else if (this.#sel.isComplete) {
           this.#sel.setPoint(p);
@@ -247,6 +256,8 @@ export class Canvas {
     this.#ucv.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
+  containInside: boolean = false;
+
   getSelectedObjects(): SObject[] {
     return this.#objs.filter((obj) => obj.isSelected);
   }
@@ -287,6 +298,8 @@ export class Canvas {
   applyOptions(opts: Partial<CanvasOpts>): void {
     if (opts.background) this.setBackground(opts.background);
     if (opts.overlay) this.setBackground(opts.overlay, true);
+
+    if (opts.containInside) this.containInside = opts.containInside;
 
     if (opts.defaultContextMenu)
       this.#defaultContextMenu = opts.defaultContextMenu;

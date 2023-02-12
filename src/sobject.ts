@@ -49,8 +49,8 @@ export abstract class SObject<E extends {} = {}> {
     this.#box = box;
   }
 
-  move(dp: Point | Coords): void {
-    this.#box.move(dp);
+  move(dp: Point | Coords, boundings: Empty<BoxArr>): void {
+    this.#box.move(dp, boundings);
   }
   setPosition(p: Point | Coords): void {
     this.#box.setPosition(p);

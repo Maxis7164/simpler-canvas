@@ -51,6 +51,7 @@ class Canvas {
 interface CanvasOpts {
   defaultContextMenu: boolean;
   drawModeActive: boolean;
+  containInside: boolean;
   background: string;
   overlay: string;
   height: number;
@@ -87,6 +88,10 @@ The height of the canvas.
 ### _get_ width
 
 The width of the canvas.
+
+### containInside
+
+Deciedes wether all objects on the canvas have to stay inside the canvas' bounding box or not.
 
 ## **Constructor**
 

@@ -13,11 +13,21 @@ export class Box {
     this.#h = h;
   }
 
-  move(dp: Point | Coords): void {
+  move(dp: Point | Coords, boundings: Empty<BoxArr>): void {
     [dp] = Point.convert(true, dp);
 
-    this.#x += dp.x;
-    this.#y += dp.y;
+    if (boundings.length > 0) {
+      const x = this.#x + dp.x;
+      const y = this.#y + dp.y;
+
+      const b = boundings as BoxArr;
+
+      if (x > b[0] && x + this.#w < b[0] + b[2]) this.#x = x;
+      if (y > b[1] && y + this.#h < b[1] + b[3]) this.#y = y;
+    } else {
+      this.#x += dp.x;
+      this.#y += dp.y;
+    }
   }
   setPosition(p: Point | Coords): void {
     [p] = Point.convert(true, p);
