@@ -7,6 +7,7 @@ import { Path } from "./path.js";
 interface BrushOpts {
   lineJoin: CanvasLineJoin;
   straightenAfter: number;
+  angleTolerance: number;
   lineCap: CanvasLineCap;
   miterLimit: number;
   straight: boolean;
@@ -128,14 +129,19 @@ export class Brush {
     render();
 
     let [p0, p1] = this.#points;
-    const tol: number = 5;
     // const a = p0.x - p1.x;
     // const b = p0.x - p1.x;
 
     const rot = Brush.#getRotationAngle(p0, pointer);
-    if (Math.abs(rot) < tol + 90 && Math.abs(rot) > -tol + 90)
+    if (
+      Math.abs(rot) < this.angleTolerance + 90 &&
+      Math.abs(rot) > -this.angleTolerance + 90
+    )
       p1 = this.#points[1] = new Point([p1.x, p0.y]);
-    else if (Math.abs(rot) < tol && Math.abs(rot) > -tol)
+    else if (
+      Math.abs(rot) < this.angleTolerance &&
+      Math.abs(rot) > -this.angleTolerance
+    )
       p1 = this.#points[1] = new Point([p0.x, p1.y]);
     // else if (rot < tol + 45 && rot > -tol + 45)
     //   p1 = this.#points[1] = new Point([
@@ -174,6 +180,9 @@ export class Brush {
     if (opts) this.applyOpts(opts);
   }
 
+  //? angle tolerance for snapping straight line feature; !(>= 45)
+  angleTolerance: number = 5;
+
   lineJoin: CanvasLineJoin = "miter";
   lineCap: CanvasLineCap = "butt";
   straightenAfter: number = 0;
@@ -210,6 +219,7 @@ export class Brush {
 
   applyOpts(opts: Partial<BrushOpts>): void {
     if (opts.straightenAfter) this.straightenAfter = opts.straightenAfter;
+    if (opts.angleTolerance) this.angleTolerance = opts.angleTolerance;
     if (opts.miterLimit) this.miter = opts.miterLimit;
     if (opts.straight) this.#straight = opts.straight;
     if (opts.lineJoin) this.lineJoin = opts.lineJoin;

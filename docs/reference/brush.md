@@ -4,6 +4,8 @@
 class Brush {
   static smoothenPath(p: Point[], corr: number = 0): SVGInstruction[];
 
+  angleTolerance: number;
+
   lineJoin: CanvasLineJoin = "miter";
   lineCap: CanvasLineCap = "butt";
   straightenAfter: number = 0;
@@ -25,6 +27,17 @@ class Brush {
   ): Unsubscribe;
 }
 
+interface BrushOpts {
+  lineJoin: CanvasLineJoin;
+  straightenAfter: number;
+  angleTolerance: number;
+  lineCap: CanvasLineCap;
+  miterLimit: number;
+  straight: boolean;
+  color: string;
+  width: number;
+}
+
 interface BrushEventMap extends Typed {
   created: { type: "created"; path: Path };
   "before:move": { type: "before:moved"; points: Point[]; pointer: Point };
@@ -33,6 +46,12 @@ interface BrushEventMap extends Typed {
 ```
 
 ## **Properties**
+
+### angleTolerance
+
+Tolerance value for snapping a straight line at about 90° or 0°. The tolerance describes how far the actual angle can vary from 90° or 0° to still snap onto them.
+
+> **Note**: This value needs to be positive and should not be greater than or equal to 45!
 
 ### color
 
