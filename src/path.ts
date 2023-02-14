@@ -367,6 +367,8 @@ export class Path extends SObject<PathExport> {
 
     ctx.transform(...this.#m.toCtxInterp());
 
+    if (this.getsDeleted) ctx.globalAlpha = 0.4;
+
     ctx.strokeStyle = this.stroke;
     ctx.lineWidth = this.weight;
     ctx.fillStyle = this.fill;
@@ -383,18 +385,6 @@ export class Path extends SObject<PathExport> {
 
     ctx.restore();
   }
-  // renderBox(ctx: CanvasRenderingContext2D, clr: string): void {
-  //   ctx.save();
-  //   ctx.beginPath();
-  //   ctx.transform(...this.#m.toCtxInterp());
-
-  //   const p = this.#applyInverseOnPoint([this.#x, this.#y]);
-
-  //   ctx.strokeStyle = clr;
-  //   ctx.strokeRect(p.x, p.y, this.#w, this.#h);
-
-  //   ctx.restore();
-  // }
 
   toObject(): PathExport {
     return {

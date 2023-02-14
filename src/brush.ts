@@ -1,8 +1,9 @@
 import { SimplerEvent, SimplerEventMap } from "./events.js";
+import type { Canvas, CanvasBrushEvent } from "./canvas";
 import { Callback, Unsubscribe } from "./events";
-import type { CanvasBrushEvent } from "./canvas";
 import { Point } from "./point.js";
 import { Path } from "./path.js";
+import { SObject } from "./sobject.js";
 
 interface BrushOpts {
   lineJoin: CanvasLineJoin;
@@ -11,6 +12,7 @@ interface BrushOpts {
   lineCap: CanvasLineCap;
   miterLimit: number;
   straight: boolean;
+  erase: boolean;
   color: string;
   width: number;
 }
@@ -82,6 +84,7 @@ export class Brush {
   });
 
   #straight: boolean = false;
+  #targets: SObject[] = [];
   #points: Point[] = [];
   #to: number = -1;
 
@@ -101,6 +104,10 @@ export class Brush {
     }
 
     return path;
+  }
+  #deleteTargets(e: CanvasBrushEvent): void {
+    e.delObjs([...this.#targets]);
+    this.#targets = [];
   }
 
   #straighten({ ctx, render }: CanvasBrushEvent): void {
@@ -175,6 +182,14 @@ export class Brush {
     if (this.straightenAfter > 0)
       this.#to = setTimeout(() => this.#straighten(e), this.straightenAfter);
   }
+  #erase(e: CanvasBrushEvent): void {
+    if (e.target) {
+      this.#targets.push(e.target);
+
+      e.target.getsDeleted = true;
+      e.render(true);
+    }
+  }
 
   constructor(opts?: Partial<BrushOpts>) {
     if (opts) this.applyOpts(opts);
@@ -182,6 +197,7 @@ export class Brush {
 
   //? angle tolerance for snapping straight line feature; !(>= 45)
   angleTolerance: number = 5;
+  erase: boolean = false;
 
   lineJoin: CanvasLineJoin = "miter";
   lineCap: CanvasLineCap = "butt";
@@ -204,7 +220,8 @@ export class Brush {
       points: [...this.#points],
     });
 
-    if (this.straight) this.#straightDraw(e);
+    if (this.erase) this.#erase(e);
+    else if (this.straight) this.#straightDraw(e);
     else this.#freeDraw(e);
 
     this.#evs.fire("move", {
@@ -213,8 +230,8 @@ export class Brush {
     });
   }
 
-  finishPath(): Path | void {
-    return this.#createPath();
+  finishPath(e: CanvasBrushEvent): Path | void {
+    return this.erase ? this.#deleteTargets(e) : this.#createPath();
   }
 
   applyOpts(opts: Partial<BrushOpts>): void {
@@ -225,6 +242,7 @@ export class Brush {
     if (opts.lineJoin) this.lineJoin = opts.lineJoin;
     if (opts.lineCap) this.lineCap = opts.lineCap;
     if (opts.color) this.color = opts.color;
+    if (opts.erase) this.erase = opts.erase;
     if (opts.width) this.width = opts.width;
   }
 

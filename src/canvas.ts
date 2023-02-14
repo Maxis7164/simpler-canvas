@@ -26,7 +26,8 @@ export interface CanvasBrushEvent {
   ctx: CanvasRenderingContext2D;
   target: SObject | null;
   pointer: Point;
-  render: () => void;
+  delObjs: (objs: SObject[]) => void;
+  render: (lower?: boolean) => void;
   clear: () => void;
 }
 
@@ -98,7 +99,8 @@ export class Canvas {
       target: this.#getTarget(p),
       pointer: p,
       ctx,
-      render: () => this.renderUpper(),
+      render: (lower) => (lower ? this.renderLower() : this.renderUpper()),
+      delObjs: (objs: SObject[]) => this.remove(...objs),
       clear: () => null,
     };
   }
@@ -143,10 +145,9 @@ export class Canvas {
     return this.#objs.find((obj) => obj.contains(pos)) ?? null;
   }
 
-  #handleDown(e: PointerEvent): void {
+  #handleDown(e: PointerEvent, p: Point): void {
     if (this.#drawMode) return;
 
-    const p = this.getCoords([e.x, e.y]);
     const target = this.#getTarget(p);
 
     if (e.button !== 2) this.#ctxm.style.display = "none";
@@ -177,12 +178,16 @@ export class Canvas {
   #onUpDown(e: PointerEvent): void {
     this.#isDown = e.type === "pointerdown";
 
+    const p = this.getCoords([e.x, e.y]);
+
     if (this.#drawMode && this.#brush && !this.#isDown) {
-      const path = this.#brush.finishPath();
+      const path = this.#brush.finishPath(
+        this.#makeCanvasBrushEvent(this.#lctx, p)
+      );
 
       if (path) this.add(path);
     } else {
-      if (this.#isDown) this.#handleDown(e);
+      if (this.#isDown) this.#handleDown(e, p);
       else this.#handleUp();
     }
   }
@@ -283,7 +288,11 @@ export class Canvas {
     this.renderLower();
   }
   remove(...objs: SObject[]): void {
-    this.#objs.set(this.#objs.filter((obj) => !objs.includes(obj)));
+    this.#objs.set(
+      this.#objs.filter((obj) =>
+        !objs.includes(obj) ? true : (obj.getsDeleted = false)
+      )
+    );
     this.renderLower();
   }
 
@@ -397,6 +406,9 @@ export class Canvas {
   //   this.renderUpper();
   // }
 
+  get objects(): SObject[] {
+    return [...this.#objs];
+  }
   get drawModeActive(): boolean {
     return this.#drawMode;
   }

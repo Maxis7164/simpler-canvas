@@ -7,6 +7,7 @@ export abstract class SObject<E extends {} = {}> {
   #box: Box;
 
   #isSelected: boolean = false;
+  #getsDeleted: boolean = false;
 
   #m: Matrix = Matrix.getIdentity(3);
   #mi: Matrix = Matrix.getIdentity(3);
@@ -58,6 +59,7 @@ export abstract class SObject<E extends {} = {}> {
 
   remove(from: Canvas): void {
     from.remove(this);
+    this.getsDeleted = false;
   }
 
   contains(p: Point | Coords): boolean {
@@ -74,6 +76,13 @@ export abstract class SObject<E extends {} = {}> {
   }
   get isSelected(): boolean {
     return this.#isSelected;
+  }
+
+  set getsDeleted(state: boolean) {
+    this.#getsDeleted = state;
+  }
+  get getsDeleted(): boolean {
+    return this.#getsDeleted;
   }
 
   get position(): Point {
