@@ -377,12 +377,8 @@ export class Canvas {
     this.setBackground(ex.background);
     this.setBackground(ex.overlay, true);
 
-    console.log(ex);
-
     this.#objs.set([]);
     const nxt = ex.objects.map((obj) => {
-      console.log(obj);
-
       return this.#hydrateObject(obj);
     });
     this.add(...nxt);

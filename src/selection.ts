@@ -34,8 +34,6 @@ export class Sel {
           this.#p2.x - this.#p1.x,
           this.#p2.y - this.#p1.y
         );
-
-    console.log(this.#p1.coords, this.#p2.coords, this.#box.toArray());
   }
   clear(): void {
     [this.#p1, this.#p2] = [null, null];
